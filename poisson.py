@@ -177,19 +177,25 @@ with io.XDMFFile(msh.comm, "out_poisson/poisson.xdmf", "w") as file:
 try:
     import pyvista
 
+    print("Configurando PyVista para modo headless...")
+    pyvista.OFF_SCREEN = True
+    pyvista.start_xvfb(wait=0.5)
+    
     cells, types, x = plot.vtk_mesh(V)
     grid = pyvista.UnstructuredGrid(cells, types, x)
     grid.point_data["u"] = uh.x.array.real
     grid.set_active_scalars("u")
-    plotter = pyvista.Plotter()
+    
+    # Crear plotter en modo off_screen
+    plotter = pyvista.Plotter(off_screen=True)
     plotter.add_mesh(grid, show_edges=True)
     warped = grid.warp_by_scalar()
     plotter.add_mesh(warped)
-    if pyvista.OFF_SCREEN:
-        pyvista.start_xvfb(wait=0.1)
-        plotter.screenshot("uh_poisson.png")
-    else:
-        plotter.show()
+    
+    # Tomar screenshot
+    plotter.show(screenshot="uh_poisson.png")
+    print("Imagen guardada como: uh_poisson.png")
+    
 except ModuleNotFoundError:
     print("'pyvista' is required to visualise the solution.")
     print("To install pyvista with pip: 'python3 -m pip install pyvista'.")
