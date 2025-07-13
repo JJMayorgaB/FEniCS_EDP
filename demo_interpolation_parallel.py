@@ -19,7 +19,7 @@ def main():
     
     # Create a distributed mesh - automatically partitioned across processes
     # Increase mesh resolution for better parallel scaling
-    nx, ny = 16, 16 # Increased from 16x16 for better parallelization
+    nx, ny = 32, 32  # Increased from 16x16 for better parallelization
     msh = create_rectangle(comm, ((0.0, 0.0), (1.0, 1.0)), (nx, ny), CellType.triangle)
     
     # Print global info only once
@@ -121,40 +121,46 @@ def main():
             plotter.screenshot(f"process0_magnitude_{size}procs.png")
             print(f"Process 0 visualization saved: process0_magnitude_{size}procs.png")
         
-        # Method 2: Alternative approach - Use VTK output for global visualization
+        # Method 2: Optimized approach using MPI gather operations
         try:
             if rank == 0:
-                print("Attempting global visualization using VTK approach...")
+                print("Attempting global visualization using MPI gather...")
+            
+            # Create local grid data structure for gathering
+            local_grid_data = {
+                'x': x,
+                'values': local_values,
+                'cells': cells,
+                'types': types
+            }
+            
+            # Gather all grid data to process 0
+            all_grid_data = comm.gather(local_grid_data, root=0)
+            
+            if rank == 0:
+                print(f"Gathered data from {len(all_grid_data)} processes")
                 
-                # Alternative: Create separate grids and combine them
-                # This is more robust for parallel data
-                
-                # Create local grid first
-                local_grid = pyvista.UnstructuredGrid(cells, types, x)
-                local_grid.point_data["u"] = local_values
-                magnitude = np.linalg.norm(local_values[:, :msh.topology.dim], axis=1)
-                local_grid.point_data["magnitude"] = magnitude
-                
-                # Save local grid info
-                local_grids = [local_grid]
-                
-                # Receive grids from other processes
-                for i in range(1, size):
-                    recv_x = comm.recv(source=i, tag=102)
-                    recv_values = comm.recv(source=i, tag=103)
-                    recv_cells = comm.recv(source=i, tag=100)
-                    recv_types = comm.recv(source=i, tag=101)
-                    
+                # Create grids from gathered data
+                local_grids = []
+                for i, grid_data in enumerate(all_grid_data):
                     # Create grid for this process
-                    proc_grid = pyvista.UnstructuredGrid(recv_cells, recv_types, recv_x)
-                    proc_grid.point_data["u"] = recv_values
-                    proc_magnitude = np.linalg.norm(recv_values[:, :msh.topology.dim], axis=1)
+                    proc_grid = pyvista.UnstructuredGrid(
+                        grid_data['cells'], 
+                        grid_data['types'], 
+                        grid_data['x']
+                    )
+                    proc_grid.point_data["u"] = grid_data['values']
+                    proc_magnitude = np.linalg.norm(
+                        grid_data['values'][:, :msh.topology.dim], axis=1
+                    )
                     proc_grid.point_data["magnitude"] = proc_magnitude
                     
                     local_grids.append(proc_grid)
+                    print(f"Process {i} grid: {proc_grid.n_points} points, {proc_grid.n_cells} cells")
                 
                 # Combine all grids using PyVista's merge functionality
                 if len(local_grids) > 1:
+                    print("Merging grids from all processes...")
                     combined_grid = local_grids[0]
                     for grid in local_grids[1:]:
                         combined_grid = combined_grid.merge(grid)
@@ -202,7 +208,7 @@ def main():
                     
                 else:
                     # Only one process - use local grid
-                    grid = local_grid
+                    grid = local_grids[0]
                     pl = pyvista.Plotter(shape=(2, 2), off_screen=True)
                     
                     pl.subplot(0, 0)
@@ -228,13 +234,6 @@ def main():
                     
                     pl.screenshot(f"uh_interpolation_parallel_{size}procs_4plots.png")
                     print(f"Single process visualization saved: uh_interpolation_parallel_{size}procs_4plots.png")
-                
-            else:
-                # Send data to process 0
-                comm.send(x, dest=0, tag=102)
-                comm.send(local_values, dest=0, tag=103)
-                comm.send(cells, dest=0, tag=100)
-                comm.send(types, dest=0, tag=101)
                 
         except Exception as e:
             if rank == 0:
