@@ -28,7 +28,7 @@ def main():
         print(f"Mesh created with {msh.topology.index_map(msh.topology.dim).size_global} cells")
     
     # Print local info for each process (synchronized)
-    for i in range(size)+1:
+    for i in range(size):
         if rank == i:
             print(f"Process {rank} has {msh.topology.index_map(msh.topology.dim).size_local} local cells")
         comm.Barrier()  # Wait for each process to print in order
