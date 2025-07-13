@@ -1,12 +1,5 @@
 # Interpolation and IO - Parallel Version with OpenMPI
-# Optimized for parallel execution with MPI
-
-import os
-# Set XDG_RUNTIME_DIR to avoid warnings in Docker
-os.environ.setdefault('XDG_RUNTIME_DIR', '/tmp')
-
-# Interpolation and IO - Parallel Version with OpenMPI
-# Optimized for parallel execution with MPI
+# Optimized for parallel execution with MPI - VISUALIZATION FIXED
 
 from mpi4py import MPI
 import numpy as np
@@ -26,7 +19,7 @@ def main():
     
     # Create a distributed mesh - automatically partitioned across processes
     # Increase mesh resolution for better parallel scaling
-    nx, ny = 32, 32  # Increased from 16x16 for better parallelization
+    nx, ny = 16, 16 # Increased from 16x16 for better parallelization
     msh = create_rectangle(comm, ((0.0, 0.0), (1.0, 1.0)), (nx, ny), CellType.triangle)
     
     # Print global info only once
@@ -86,11 +79,11 @@ def main():
         if rank == 0:
             print("ADIOS2 required for parallel VTX output")
 
-    # Parallel visualization (only on rank 0 for display)
-    if rank == 0:
-        try:
-            import pyvista
-            
+    # FIXED: Parallel visualization with proper data gathering
+    try:
+        import pyvista
+        
+        if rank == 0:
             print("Configurando PyVista para modo headless...")
             pyvista.OFF_SCREEN = True
             
@@ -102,55 +95,154 @@ def main():
                 print(f"Warning: No se pudo iniciar Xvfb: {e}")
 
             print("Creating visualization...")
+        
+        # Create VTK mesh data for each process
+        cells, types, x = plot.vtk_mesh(V0)
+        
+        # Prepare local function values
+        local_values = np.zeros((x.shape[0], 3), dtype=np.float64)
+        local_values[:, :msh.topology.dim] = u0.x.array.reshape(x.shape[0], msh.topology.dim).real
+        
+        # Method 1: Individual process visualization (as fallback)
+        if rank == 0:
+            print("Creating individual process visualization...")
             
-            # Gather data from all processes for visualization
-            cells, types, x = plot.vtk_mesh(V0)
+            # Create local visualization for process 0
             grid = pyvista.UnstructuredGrid(cells, types, x)
-            values = np.zeros((x.shape[0], 3), dtype=np.float64)
-            values[:, : msh.topology.dim] = u0.x.array.reshape(x.shape[0], msh.topology.dim).real
-            grid.point_data["u"] = values
-            
-            # Agregar magnitud como dato escalar para mejor visualización
-            magnitude = np.linalg.norm(values[:, :msh.topology.dim], axis=1)
+            grid.point_data["u"] = local_values
+            magnitude = np.linalg.norm(local_values[:, :msh.topology.dim], axis=1)
             grid.point_data["magnitude"] = magnitude
-
-            # Crear plotter principal con 4 subplots
-            pl = pyvista.Plotter(shape=(2, 2), off_screen=True)
-
-            pl.subplot(0, 0)
-            pl.add_text("magnitude (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(grid.copy(), scalars="magnitude", show_edges=True, cmap="viridis")
-
-            pl.subplot(0, 1)
-            glyphs = grid.glyph(orient="u", factor=0.08)
-            pl.add_text("vector glyphs (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(glyphs, show_scalar_bar=False)
-            pl.add_mesh(grid.copy(), style="wireframe", line_width=2, color="black")
-
-            pl.subplot(1, 0)
-            pl.add_text("x-component (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(grid.copy(), scalars="u", component=0, show_edges=True, cmap="coolwarm")
-
-            pl.subplot(1, 1)
-            pl.add_text("y-component (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(grid.copy(), scalars="u", component=1, show_edges=True, cmap="coolwarm")
-
-            pl.view_xy()
-            pl.link_views()
             
-            # Guardar imagen principal
-            pl.screenshot("uh_interpolation_parallel_4plots.png")
-            print("Screenshot principal guardado: uh_interpolation_parallel_4plots.png")
-
-            # Crear una visualización adicional simple
-            plotter_simple = pyvista.Plotter(off_screen=True)
-            plotter_simple.add_text("Magnitude - Parallel Nedelec", font_size=14, color="black")
-            plotter_simple.add_mesh(grid, scalars="magnitude", show_edges=True, cmap="plasma")
-            plotter_simple.view_xy()
-            plotter_simple.screenshot("uh_magnitude_parallel.png")
-            print("Screenshot magnitud guardado: uh_magnitude_parallel.png")
+            # Save individual process visualization
+            plotter = pyvista.Plotter(off_screen=True)
+            plotter.add_text(f"Process 0 - Magnitude (of {size} procs)", font_size=14, color="black")
+            plotter.add_mesh(grid, scalars="magnitude", show_edges=True, cmap="plasma")
+            plotter.view_xy()
+            plotter.screenshot(f"process0_magnitude_{size}procs.png")
+            print(f"Process 0 visualization saved: process0_magnitude_{size}procs.png")
+        
+        # Method 2: Alternative approach - Use VTK output for global visualization
+        try:
+            if rank == 0:
+                print("Attempting global visualization using VTK approach...")
                 
-        except ModuleNotFoundError:
+                # Alternative: Create separate grids and combine them
+                # This is more robust for parallel data
+                
+                # Create local grid first
+                local_grid = pyvista.UnstructuredGrid(cells, types, x)
+                local_grid.point_data["u"] = local_values
+                magnitude = np.linalg.norm(local_values[:, :msh.topology.dim], axis=1)
+                local_grid.point_data["magnitude"] = magnitude
+                
+                # Save local grid info
+                local_grids = [local_grid]
+                
+                # Receive grids from other processes
+                for i in range(1, size):
+                    recv_x = comm.recv(source=i, tag=102)
+                    recv_values = comm.recv(source=i, tag=103)
+                    recv_cells = comm.recv(source=i, tag=100)
+                    recv_types = comm.recv(source=i, tag=101)
+                    
+                    # Create grid for this process
+                    proc_grid = pyvista.UnstructuredGrid(recv_cells, recv_types, recv_x)
+                    proc_grid.point_data["u"] = recv_values
+                    proc_magnitude = np.linalg.norm(recv_values[:, :msh.topology.dim], axis=1)
+                    proc_grid.point_data["magnitude"] = proc_magnitude
+                    
+                    local_grids.append(proc_grid)
+                
+                # Combine all grids using PyVista's merge functionality
+                if len(local_grids) > 1:
+                    combined_grid = local_grids[0]
+                    for grid in local_grids[1:]:
+                        combined_grid = combined_grid.merge(grid)
+                    
+                    # Clean up duplicate points
+                    combined_grid = combined_grid.clean(tolerance=1e-10)
+                    
+                    print(f"Combined grid created with {combined_grid.n_points} points and {combined_grid.n_cells} cells")
+                    
+                    # Create combined visualization
+                    pl = pyvista.Plotter(shape=(2, 2), off_screen=True)
+                    
+                    pl.subplot(0, 0)
+                    pl.add_text(f"Magnitude (parallel {size} procs)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(combined_grid.copy(), scalars="magnitude", show_edges=True, cmap="viridis")
+                    
+                    pl.subplot(0, 1)
+                    glyphs = combined_grid.glyph(orient="u", factor=0.08)
+                    pl.add_text(f"Vector glyphs (parallel {size} procs)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(glyphs, show_scalar_bar=False)
+                    pl.add_mesh(combined_grid.copy(), style="wireframe", line_width=2, color="black")
+                    
+                    pl.subplot(1, 0)
+                    pl.add_text(f"X-component (parallel {size} procs)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(combined_grid.copy(), scalars="u", component=0, show_edges=True, cmap="coolwarm")
+                    
+                    pl.subplot(1, 1)
+                    pl.add_text(f"Y-component (parallel {size} procs)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(combined_grid.copy(), scalars="u", component=1, show_edges=True, cmap="coolwarm")
+                    
+                    pl.view_xy()
+                    pl.link_views()
+                    
+                    # Save main image
+                    pl.screenshot(f"uh_interpolation_parallel_{size}procs_4plots.png")
+                    print(f"Global visualization saved: uh_interpolation_parallel_{size}procs_4plots.png")
+                    
+                    # Also create a simple magnitude plot
+                    plotter_simple = pyvista.Plotter(off_screen=True)
+                    plotter_simple.add_text(f"Magnitude - Parallel Nedelec ({size} procs)", font_size=14, color="black")
+                    plotter_simple.add_mesh(combined_grid, scalars="magnitude", show_edges=True, cmap="plasma")
+                    plotter_simple.view_xy()
+                    plotter_simple.screenshot(f"uh_magnitude_parallel_{size}procs.png")
+                    print(f"Simple magnitude visualization saved: uh_magnitude_parallel_{size}procs.png")
+                    
+                else:
+                    # Only one process - use local grid
+                    grid = local_grid
+                    pl = pyvista.Plotter(shape=(2, 2), off_screen=True)
+                    
+                    pl.subplot(0, 0)
+                    pl.add_text(f"Magnitude (single process)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(grid.copy(), scalars="magnitude", show_edges=True, cmap="viridis")
+                    
+                    pl.subplot(0, 1)
+                    glyphs = grid.glyph(orient="u", factor=0.08)
+                    pl.add_text(f"Vector glyphs (single process)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(glyphs, show_scalar_bar=False)
+                    pl.add_mesh(grid.copy(), style="wireframe", line_width=2, color="black")
+                    
+                    pl.subplot(1, 0)
+                    pl.add_text(f"X-component (single process)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(grid.copy(), scalars="u", component=0, show_edges=True, cmap="coolwarm")
+                    
+                    pl.subplot(1, 1)
+                    pl.add_text(f"Y-component (single process)", font_size=12, color="black", position="upper_edge")
+                    pl.add_mesh(grid.copy(), scalars="u", component=1, show_edges=True, cmap="coolwarm")
+                    
+                    pl.view_xy()
+                    pl.link_views()
+                    
+                    pl.screenshot(f"uh_interpolation_parallel_{size}procs_4plots.png")
+                    print(f"Single process visualization saved: uh_interpolation_parallel_{size}procs_4plots.png")
+                
+            else:
+                # Send data to process 0
+                comm.send(x, dest=0, tag=102)
+                comm.send(local_values, dest=0, tag=103)
+                comm.send(cells, dest=0, tag=100)
+                comm.send(types, dest=0, tag=101)
+                
+        except Exception as e:
+            if rank == 0:
+                print(f"Global visualization failed: {e}")
+                print("Using individual process visualization instead")
+                
+    except ModuleNotFoundError:
+        if rank == 0:
             print("pyvista is required to visualise the solution")
     
     # Final synchronization

@@ -78,6 +78,7 @@ WORKDIR /workspace
 # Set environment variables for runtime
 #ENV HDF5_MPI=ON
 #ENV HDF5_PKGCONFIG_NAME=hdf5
+ENV XDG_RUNTIME_DIR=/tmp
 
 # Expose common ports for Jupyter
 EXPOSE 8888
