@@ -21,7 +21,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     git \
     wget \
     curl \
-    ninja-build && \
+    ninja-build \
+    htop && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -68,6 +69,8 @@ RUN python3 -m pip install --no-cache-dir \
   #  python3 -m pip install --no-cache-dir --no-binary=h5py --no-build-isolation h5py -vv && \
    # python3 -m pip install --no-cache-dir meshio
     
+RUN cd /tmp && curl -sS https://starship.rs/install.sh > install_starship.sh  &&  sh install_starship.sh --yes
+RUN echo 'eval "$(starship init bash)"' >> ~/.bashrc
 
 # Set working directory
 WORKDIR /workspace

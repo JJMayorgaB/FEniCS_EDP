@@ -13,7 +13,8 @@ def main():
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
-    
+    print(size)
+
     if rank == 0:
         print(f"Running on {size} MPI processes")
     
@@ -27,7 +28,7 @@ def main():
         print(f"Mesh created with {msh.topology.index_map(msh.topology.dim).size_global} cells")
     
     # Print local info for each process (synchronized)
-    for i in range(size):
+    for i in range(size)+1:
         if rank == i:
             print(f"Process {rank} has {msh.topology.index_map(msh.topology.dim).size_local} local cells")
         comm.Barrier()  # Wait for each process to print in order
