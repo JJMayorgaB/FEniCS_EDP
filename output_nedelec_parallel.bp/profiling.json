@@ -1,10 +1,3 @@
 [
-{ "rank": 0, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 61023, "mkdir_mus": 74, "aggregation_mus": 0, "meta_sort_merge_mus": 3308, "minmax_mus": 896, "memcpy_mus": 108, "buffering_mus": 7721, "transport_0": { "type": "File_POSIX", "close_mus": 5451, "write_mus": 10493, "open_mus": 5686}, "transport_1": { "type": "File_POSIX", "close_mus": 0, "write_mus": 95, "open_mus": 1453} },
-{ "rank": 1, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 61159, "mkdir_mus": 158, "aggregation_mus": 0, "meta_sort_merge_mus": 28, "minmax_mus": 902, "memcpy_mus": 172, "buffering_mus": 4696 },
-{ "rank": 2, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 60956, "mkdir_mus": 168, "aggregation_mus": 0, "meta_sort_merge_mus": 31, "minmax_mus": 973, "memcpy_mus": 93, "buffering_mus": 4700 },
-{ "rank": 3, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 58317, "mkdir_mus": 176, "aggregation_mus": 0, "meta_sort_merge_mus": 41, "minmax_mus": 941, "memcpy_mus": 111, "buffering_mus": 5628 },
-{ "rank": 4, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 58114, "mkdir_mus": 165, "aggregation_mus": 0, "meta_sort_merge_mus": 977, "minmax_mus": 915, "memcpy_mus": 150, "buffering_mus": 5575 },
-{ "rank": 5, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 60956, "mkdir_mus": 160, "aggregation_mus": 0, "meta_sort_merge_mus": 943, "minmax_mus": 995, "memcpy_mus": 161, "buffering_mus": 5716 },
-{ "rank": 6, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 62580, "mkdir_mus": 175, "aggregation_mus": 0, "meta_sort_merge_mus": 965, "minmax_mus": 979, "memcpy_mus": 101, "buffering_mus": 5689 },
-{ "rank": 7, "start": "Sun_Jul_13_18:43:29_2025", "threads": 1, "bytes": 58926, "mkdir_mus": 163, "aggregation_mus": 0, "meta_sort_merge_mus": 966, "minmax_mus": 1002, "memcpy_mus": 145, "buffering_mus": 5730 }
+{ "rank": 0, "start": "Sun_Jul_13_18:44:51_2025", "threads": 1, "bytes": 417288, "mkdir_mus": 32, "aggregation_mus": 0, "meta_sort_merge_mus": 190, "minmax_mus": 211, "memcpy_mus": 30, "buffering_mus": 3033, "transport_0": { "type": "File_POSIX", "close_mus": 1541, "write_mus": 10255, "open_mus": 898}, "transport_1": { "type": "File_POSIX", "close_mus": 0, "write_mus": 66, "open_mus": 297} }
 ]
