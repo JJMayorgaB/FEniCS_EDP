@@ -1,6 +1,10 @@
 # Interpolation and IO - Parallel Version with OpenMPI
 # Optimized for parallel execution with MPI
 
+import os
+# Set XDG_RUNTIME_DIR to avoid warnings in Docker
+os.environ.setdefault('XDG_RUNTIME_DIR', '/tmp')
+
 from mpi4py import MPI
 import numpy as np
 
@@ -13,7 +17,6 @@ def main():
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
-    print(size)
 
     if rank == 0:
         print(f"Running on {size} MPI processes")
@@ -37,17 +40,31 @@ def main():
     V = functionspace(msh, ("Nedelec 1st kind H(curl)", 1))
     u = Function(V, dtype=default_scalar_type)
     
-    # Each process finds its local cells
-    tdim = msh.topology.dim
-    cells0 = locate_entities(msh, tdim, lambda x: x[0] <= 0.5)
-    cells1 = locate_entities(msh, tdim, lambda x: x[0] >= 0.5)
-    
     if rank == 0:
         print("Interpolating functions in parallel...")
     
-    # Parallel interpolation - each process works on its local cells
-    u.interpolate(lambda x: np.vstack((x[0], x[1])), cells0)
-    u.interpolate(lambda x: np.vstack((x[0] + 1, x[1])), cells1)
+    # Define a function that varies spatially - each process will interpolate
+    # on its local portion of the mesh automatically
+    def vector_field(x):
+        # Create a spatially varying vector field
+        # Left side (x <= 0.5): (x, y)
+        # Right side (x > 0.5): (x + 1, y)
+        result = np.zeros((2, x.shape[1]))
+        
+        # Left region
+        left_mask = x[0] <= 0.5
+        result[0, left_mask] = x[0, left_mask]
+        result[1, left_mask] = x[1, left_mask]
+        
+        # Right region  
+        right_mask = x[0] > 0.5
+        result[0, right_mask] = x[0, right_mask] + 1.0
+        result[1, right_mask] = x[1, right_mask]
+        
+        return result
+    
+    # Parallel interpolation - each process works on its local cells automatically
+    u.interpolate(vector_field)
     
     # Synchronize after interpolation
     comm.Barrier()
@@ -112,22 +129,28 @@ def main():
             pl = pyvista.Plotter(shape=(2, 2), off_screen=True)
 
             pl.subplot(0, 0)
-            pl.add_text("magnitude (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(grid.copy(), scalars="magnitude", show_edges=True, cmap="viridis")
+            pl.add_text("Magnitude (Parallel)", font_size=12, color="black", position="upper_edge")
+            pl.add_mesh(grid.copy(), scalars="magnitude", show_edges=True, cmap="viridis", 
+                       edge_color="white", line_width=0.5)
+            pl.add_scalar_bar("Magnitude")
 
             pl.subplot(0, 1)
-            glyphs = grid.glyph(orient="u", factor=0.08)
-            pl.add_text("vector glyphs (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(glyphs, show_scalar_bar=False)
-            pl.add_mesh(grid.copy(), style="wireframe", line_width=2, color="black")
+            glyphs = grid.glyph(orient="u", factor=0.1)
+            pl.add_text("Vector Field (Parallel)", font_size=12, color="black", position="upper_edge")
+            pl.add_mesh(glyphs, show_scalar_bar=False, color="red")
+            pl.add_mesh(grid.copy(), style="wireframe", line_width=1, color="gray", opacity=0.3)
 
             pl.subplot(1, 0)
-            pl.add_text("x-component (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(grid.copy(), scalars="u", component=0, show_edges=True, cmap="coolwarm")
+            pl.add_text("X-Component", font_size=12, color="black", position="upper_edge")
+            pl.add_mesh(grid.copy(), scalars="u", component=0, show_edges=True, cmap="coolwarm",
+                       edge_color="white", line_width=0.5)
+            pl.add_scalar_bar("X-Component")
 
             pl.subplot(1, 1)
-            pl.add_text("y-component (parallel)", font_size=12, color="black", position="upper_edge")
-            pl.add_mesh(grid.copy(), scalars="u", component=1, show_edges=True, cmap="coolwarm")
+            pl.add_text("Y-Component", font_size=12, color="black", position="upper_edge")
+            pl.add_mesh(grid.copy(), scalars="u", component=1, show_edges=True, cmap="coolwarm",
+                       edge_color="white", line_width=0.5)
+            pl.add_scalar_bar("Y-Component")
 
             pl.view_xy()
             pl.link_views()
