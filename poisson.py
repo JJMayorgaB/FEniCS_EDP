@@ -82,6 +82,7 @@ from mpi4py import MPI
 
 # +
 import numpy as np
+import os
 
 import ufl
 from dolfinx import fem, io, mesh, plot
@@ -166,7 +167,7 @@ assert isinstance(uh, fem.Function)
 # <dolfinx.io.XDMFFile>` file visualization with ParaView or VisIt:
 
 # +
-with io.XDMFFile(msh.comm, "out_poisson/poisson.xdmf", "w") as file:
+with io.XDMFFile(msh.comm, "post_data/poisson.xdmf", "w") as file:
     file.write_mesh(msh)
     file.write_function(uh)
 # -
@@ -178,6 +179,11 @@ try:
     import pyvista
 
     print("Configurando PyVista para modo headless...")
+    
+    # Create directories if they don't exist
+    os.makedirs("figures", exist_ok=True)
+    os.makedirs("post_data", exist_ok=True)
+    
     pyvista.OFF_SCREEN = True
     pyvista.start_xvfb(wait=0.5)
     
@@ -193,8 +199,8 @@ try:
     plotter.add_mesh(warped)
     
     # Tomar screenshot
-    plotter.show(screenshot="uh_poisson.png")
-    print("Imagen guardada como: uh_poisson.png")
+    plotter.show(screenshot="figures/uh_poisson.png")
+    print("Imagen guardada como: figures/uh_poisson.png")
     
 except ModuleNotFoundError:
     print("'pyvista' is required to visualise the solution.")

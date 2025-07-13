@@ -3,12 +3,14 @@
 
 from mpi4py import MPI
 import numpy as np
+import os
 
 from dolfinx import default_scalar_type, plot
 from dolfinx.fem import Function, functionspace
 from dolfinx.mesh import CellType, create_rectangle, locate_entities
 
 def main():
+
     # Get MPI communicator information
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
@@ -16,10 +18,13 @@ def main():
     
     if rank == 0:
         print(f"Running on {size} MPI processes")
+        # Create directories if they don't exist
+        os.makedirs("figures", exist_ok=True)
+        os.makedirs("post_data", exist_ok=True)
     
     # Create a distributed mesh - automatically partitioned across processes
     # Increase mesh resolution for better parallel scaling
-    nx, ny = 32, 32  # Increased from 16x16 for better parallelization
+    nx, ny = 16, 16 
     msh = create_rectangle(comm, ((0.0, 0.0), (1.0, 1.0)), (nx, ny), CellType.triangle)
     
     # Print global info only once
@@ -64,7 +69,7 @@ def main():
         from dolfinx.io import VTXWriter
         
         # Create filename with MPI-aware naming
-        filename = f"output_nedelec_parallel"
+        filename = f"post_data/output_nedelec_parallel"
         
         if rank == 0:
             print("Writing parallel output...")
@@ -118,8 +123,8 @@ def main():
             plotter.add_text(f"Process 0 - Magnitude (of {size} procs)", font_size=14, color="black")
             plotter.add_mesh(grid, scalars="magnitude", show_edges=True, cmap="plasma")
             plotter.view_xy()
-            plotter.screenshot(f"process0_magnitude_{size}procs.png")
-            print(f"Process 0 visualization saved: process0_magnitude_{size}procs.png")
+            plotter.screenshot(f"figures/process0_magnitude_{size}procs.png")
+            print(f"Process 0 visualization saved: figures/process0_magnitude_{size}procs.png")
         
         # Method 2: Optimized approach using MPI gather operations
         try:
@@ -195,16 +200,16 @@ def main():
                     pl.link_views()
                     
                     # Save main image
-                    pl.screenshot(f"uh_interpolation_parallel_{size}procs_4plots.png")
-                    print(f"Global visualization saved: uh_interpolation_parallel_{size}procs_4plots.png")
+                    pl.screenshot(f"figures/uh_interpolation_parallel_{size}procs_4plots.png")
+                    print(f"Global visualization saved: figures/uh_interpolation_parallel_{size}procs_4plots.png")
                     
                     # Also create a simple magnitude plot
                     plotter_simple = pyvista.Plotter(off_screen=True)
                     plotter_simple.add_text(f"Magnitude - Parallel Nedelec ({size} procs)", font_size=14, color="black")
                     plotter_simple.add_mesh(combined_grid, scalars="magnitude", show_edges=True, cmap="plasma")
                     plotter_simple.view_xy()
-                    plotter_simple.screenshot(f"uh_magnitude_parallel_{size}procs.png")
-                    print(f"Simple magnitude visualization saved: uh_magnitude_parallel_{size}procs.png")
+                    plotter_simple.screenshot(f"figures/uh_magnitude_parallel_{size}procs.png")
+                    print(f"Simple magnitude visualization saved: figures/uh_magnitude_parallel_{size}procs.png")
                     
                 else:
                     # Only one process - use local grid
@@ -232,8 +237,8 @@ def main():
                     pl.view_xy()
                     pl.link_views()
                     
-                    pl.screenshot(f"uh_interpolation_parallel_{size}procs_4plots.png")
-                    print(f"Single process visualization saved: uh_interpolation_parallel_{size}procs_4plots.png")
+                    pl.screenshot(f"figures/uh_interpolation_parallel_{size}procs_4plots.png")
+                    print(f"Single process visualization saved: figures/uh_interpolation_parallel_{size}procs_4plots.png")
                 
         except Exception as e:
             if rank == 0:
