@@ -91,14 +91,6 @@ def main():
         if rank == 0:
             print("Configurando PyVista para modo headless...")
             pyvista.OFF_SCREEN = True
-            
-            # Inicializar Xvfb solo si es necesario
-            try:
-                pyvista.start_xvfb(wait=0.5)
-                print("Xvfb iniciado correctamente")
-            except Exception as e:
-                print(f"Warning: No se pudo iniciar Xvfb: {e}")
-
             print("Creating visualization...")
         
         # Create VTK mesh data for each process
@@ -124,6 +116,7 @@ def main():
             plotter.add_mesh(grid, scalars="magnitude", show_edges=True, cmap="plasma")
             plotter.view_xy()
             plotter.screenshot(f"figures/process0_magnitude_{size}procs.png")
+            plotter.close()  # Cerrar plotter explícitamente
             print(f"Process 0 visualization saved: figures/process0_magnitude_{size}procs.png")
         
         # Method 2: Optimized approach using MPI gather operations
@@ -201,6 +194,7 @@ def main():
                     
                     # Save main image
                     pl.screenshot(f"figures/uh_interpolation_parallel_{size}procs_4plots.png")
+                    pl.close()  # Cerrar plotter explícitamente
                     print(f"Global visualization saved: figures/uh_interpolation_parallel_{size}procs_4plots.png")
                     
                     # Also create a simple magnitude plot
@@ -209,6 +203,7 @@ def main():
                     plotter_simple.add_mesh(combined_grid, scalars="magnitude", show_edges=True, cmap="plasma")
                     plotter_simple.view_xy()
                     plotter_simple.screenshot(f"figures/uh_magnitude_parallel_{size}procs.png")
+                    plotter_simple.close()  # Cerrar plotter explícitamente
                     print(f"Simple magnitude visualization saved: figures/uh_magnitude_parallel_{size}procs.png")
                     
                 else:
@@ -238,6 +233,7 @@ def main():
                     pl.link_views()
                     
                     pl.screenshot(f"figures/uh_interpolation_parallel_{size}procs_4plots.png")
+                    pl.close()  # Cerrar plotter explícitamente
                     print(f"Single process visualization saved: figures/uh_interpolation_parallel_{size}procs_4plots.png")
                 
         except Exception as e:
@@ -248,11 +244,26 @@ def main():
     except ModuleNotFoundError:
         if rank == 0:
             print("pyvista is required to visualise the solution")
+    except Exception as viz_error:
+        if rank == 0:
+            print(f"Visualization error: {viz_error}")
     
     # Final synchronization
     comm.Barrier()
     if rank == 0:
         print("Parallel execution completed successfully")
+    
+    # Limpiar recursos y finalizar MPI correctamente
+    try:
+        import pyvista
+        if rank == 0:
+            # Limpiar caché global de PyVista
+            pyvista.close_all()
+    except:
+        pass
+    
+    # Sincronización final antes del exit
+    comm.Barrier()
 
 if __name__ == "__main__":
     main()
