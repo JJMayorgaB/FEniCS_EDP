@@ -3,10 +3,8 @@ From: dolfinx/dolfinx:stable
 Stage: spython-base
 
 %post
-
 # Dependency versions
 GMSH_VERSION=4_12_2
-
 mkdir -p /tmp
 cd /tmp
 
@@ -14,51 +12,47 @@ cd /tmp
 export DEBIAN_FRONTEND=noninteractive && \
 apt-get -qq update && \
 apt-get -y install \
-libglu1 \
+libglu1-mesa \
+libglu1-mesa-dev \
 libxcursor-dev \
 libxft2 \
 libxinerama1 \
 libfltk1.3-dev \
 libfreetype6-dev  \
 libgl1-mesa-dev \
+libgl1-mesa-glx \
+libosmesa6 \
+libosmesa6-dev \
 libocct-foundation-dev \
 libocct-data-exchange-dev \
 git \
 wget \
 curl \
 ninja-build \
-htop && \
-apt-get clean && \
-rm -rf /var/lib/apt/lists/* 
-
-# Install and configure GMSH
-#RUN git clone -b gmsh_${GMSH_VERSION} --single-branch --depth 1 https://gitlab.onelab.info/gmsh/gmsh.git && \
- #   cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_DYNAMIC=1 -B build-dir -S gmsh && \
-  #  cmake --build build-dir && \
-   # cmake --install build-dir && \
-    # Move gmsh python package to correct location
-    #export SP_DIR=$(python3 -c 'import sys, site; sys.stdout.write(site.getsitepackages()[0])') && \
-   #mv /usr/local/lib/gmsh.py ${SP_DIR}/ && \
-    #mv /usr/local/lib/gmsh*.dist-info ${SP_DIR}/ && \
-    # Verify GMSH installation
-    #gmsh --version && \
-    #python3 -c "import gmsh; print('GMSH Python module loaded successfully')" && \
-    # Clean up
-    #rm -rf /tmp/*
-
-# Install system packages for headless operation
-apt-get update && apt-get install -y \
+htop \
 xvfb \
 x11-utils \
-&& apt-get clean \
-&& rm -rf /var/lib/apt/lists/*
+libxrender1 \
+libxext6 \
+libsm6 \
+libice6 \
+libx11-6 \
+libxau6 \
+libxdmcp6 \
+libdrm2 \
+libxdamage1 \
+libxfixes3 \
+libxxf86vm1 \
+mesa-utils \
+&& apt-get clean && \
+rm -rf /var/lib/apt/lists/*
 
-# Install Python packages
+# Install Python packages with specific versions for stability
 python3 -m pip install --no-cache-dir \
 cython \
 pkgconfig \
 mpi4py \
-pyvista \
+"pyvista>=0.42.0" \
 matplotlib \
 seaborn \
 jupyter \
@@ -66,37 +60,67 @@ jupyterlab \
 ipywidgets \
 trame \
 trame-vuetify \
-trame-vtk
+trame-vtk \
+vtk
 
-# Install HDF5 with MPI support
-#RUN export HDF5_MPI=ON && \
- #   export HDF5_PKGCONFIG_NAME="hdf5" && \
-  #  python3 -m pip install --no-cache-dir --no-binary=h5py --no-build-isolation h5py -vv && \
-   # python3 -m pip install --no-cache-dir meshio
-    
-cd /tmp && curl -sS https://starship.rs/install.sh > install_starship.sh  &&  sh install_starship.sh --yes
+# Install starship
+cd /tmp && curl -sS https://starship.rs/install.sh > install_starship.sh && sh install_starship.sh --yes
 echo 'eval "$(starship init bash)"' >> ~/.bashrc
 
 # Set working directory
 mkdir -p /workspace
 cd /workspace
 
-# Set environment variables for runtime
-#ENV HDF5_MPI=ON
-#ENV HDF5_PKGCONFIG_NAME=hdf5
-XDG_RUNTIME_DIR=/tmp
-MESA_GL_VERSION_OVERRIDE=3.3
+# Create display setup script
+cat > /usr/local/bin/setup_display.sh << 'EOF'
+#!/bin/bash
+export DISPLAY=:99
+export MESA_GL_VERSION_OVERRIDE=3.3
+export MESA_GLSL_VERSION_OVERRIDE=330
+export GALLIUM_DRIVER=llvmpipe
+export LIBGL_ALWAYS_SOFTWARE=1
+export LIBGL_ALWAYS_INDIRECT=0
+export PYVISTA_OFF_SCREEN=true
+export PYVISTA_USE_PANEL=false
+export PYVISTA_TRAME_SERVER_PROXY_PREFIX=""
+export VTK_SILENCE_GET_VOID_POINTER_WARNINGS=1
+export QT_QPA_PLATFORM=offscreen
 
-# Expose common ports for Jupyter
-# EXPOSE 8888
+# Start virtual display if not already running
+if ! pgrep -x "Xvfb" > /dev/null; then
+    Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &
+    sleep 2
+fi
+EOF
 
-# Default command
+chmod +x /usr/local/bin/setup_display.sh
+
 %environment
 export XDG_RUNTIME_DIR=/tmp
 export MESA_GL_VERSION_OVERRIDE=3.3
+export MESA_GLSL_VERSION_OVERRIDE=330
+export GALLIUM_DRIVER=llvmpipe
+export LIBGL_ALWAYS_SOFTWARE=1
+export LIBGL_ALWAYS_INDIRECT=0
+export PYVISTA_OFF_SCREEN=true
+export PYVISTA_USE_PANEL=false
+export PYVISTA_TRAME_SERVER_PROXY_PREFIX=""
+export VTK_SILENCE_GET_VOID_POINTER_WARNINGS=1
+export QT_QPA_PLATFORM=offscreen
+export OMPI_ALLOW_RUN_AS_ROOT=1
+export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+export DISPLAY=:99
+
 %runscript
+# Setup display environment
+/usr/local/bin/setup_display.sh
+
 cd /workspace
-exec /bin/bash /bin/bash "$@"
+exec /bin/bash "$@"
+
 %startscript
+# Setup display environment
+/usr/local/bin/setup_display.sh
+
 cd /workspace
-exec /bin/bash /bin/bash "$@"
+exec /bin/bash "$@"
