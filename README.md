@@ -60,7 +60,7 @@ El repositorio incluye un `Dockerfile` preconfigurado con todas las dependencias
 
 ```bash
 # 1. Clonar el repositorio
-git clone <repository-url>
+git clone https://github.com/JJMayorgaB/FEniCS_EDP
 cd FEniCS_EDP
 
 # 2. Construir la imagen Docker (solo necesario la primera vez)
@@ -94,7 +94,7 @@ El repositorio incluye un archivo `fenics.def` para crear contenedores Apptainer
 
 ```bash
 # 1. Clonar el repositorio
-git clone <repository-url>
+git clone https://github.com/JJMayorgaB/FEniCS_EDP
 cd FEniCS_EDP
 
 # 2. Construir el contenedor SIF (solo necesario la primera vez)
@@ -627,41 +627,6 @@ if n % 25 == 0:  # Monitoreo menos frecuente
 ```
 
 ### Configuración para HPC
-
-#### 🔸 **SLURM Script Example**
-
-```bash
-#!/bin/bash
-#SBATCH --job-name=wave_interference
-#SBATCH --ntasks=16
-#SBATCH --time=02:00:00
-#SBATCH --partition=compute
-
-module load apptainer
-
-# Ejecutar con binding de cores óptimo
-apptainer exec --bind /scratch:/tmp fenics.sif \
-    mpirun --bind-to core --map-by socket:PE=1 \
-    -np $SLURM_NTASKS python3 scripts/interference.py
-```
-
-#### 🔸 **Escalabilidad Típica Observada**
-
-```
-Cores | Speedup | Efficiency | Notas
-------|---------|------------|------------------------
-1     | 1.00    | 100.0%     | Baseline secuencial
-2     | 1.85    | 92.5%      | Excelente escalabilidad
-4     | 3.45    | 86.3%      | Muy buena parallelización
-8     | 6.20    | 77.5%      | Buena eficiencia
-16    | 10.80   | 67.5%      | Comunicación notable
-32    | 16.50   | 51.6%      | Overhead significativo
-```
-
-**Interpretación:**
-- **1-8 cores**: Escalabilidad casi lineal (>75% eficiencia)
-- **8-16 cores**: Degradación moderada por comunicación
-- **>16 cores**: Overhead de comunicación dominante para problemas pequeños
 
 ### Técnicas Avanzadas de Paralelización
 
