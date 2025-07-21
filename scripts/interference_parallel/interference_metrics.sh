@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# Wave Equation Parallel Performance Metrics Script
+# Wave Interference Parallel Performance Metrics Script
 # 
-# This script automatically tests the wave equation solver with different
+# This script automatically tests the wave interference solver with different
 # core counts and calculates parallel performance metrics.
 
 echo "======================================================="
-echo "    Wave Equation Parallel Performance Metrics      "
+echo "  Wave Interference Parallel Performance Metrics     "
 echo "======================================================="
 echo
 
 # Check if required files exist
-SCRIPT_NAME="wave_eq_parallel.py"
+SCRIPT_NAME="interference_parallel.py"
 if [ ! -f "$SCRIPT_NAME" ]; then
     echo "Error: $SCRIPT_NAME not found in current directory"
-    echo "Please make sure you have the wave equation script"
+    echo "Please make sure you have the wave interference script"
     exit 1
 fi
 
@@ -35,15 +35,14 @@ if ! command -v bc &> /dev/null; then
 fi
 
 # Create results directory
-RESULTS_DIR="metrics_results"
+RESULTS_DIR="interference_results"
 mkdir -p "$RESULTS_DIR"
 
 # Results file with timestamp
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-RESULTS_FILE="$RESULTS_DIR/wave_performance_$TIMESTAMP.txt"
+RESULTS_FILE="$RESULTS_DIR/interference_performance_$TIMESTAMP.txt"
 
-echo "Results will be saved to:"
-echo "  - Text format: $RESULTS_FILE"
+echo "Results will be saved to: $RESULTS_FILE"
 echo
 
 # Initialize result files
@@ -64,7 +63,7 @@ run_benchmark() {
     local temp_output=$(mktemp)
     local start_time=$(date +%s.%N)
     
-    timeout 1200 mpirun -np $cores python3 "$SCRIPT_NAME" > "$temp_output" 2>&1
+    timeout 1800 mpirun -np $cores python3 "$SCRIPT_NAME" > "$temp_output" 2>&1
     local exit_code=$?
     local end_time=$(date +%s.%N)
     
@@ -85,7 +84,7 @@ run_benchmark() {
             return 1
         fi
     elif [ $exit_code -eq 124 ]; then
-        echo "✗ Timeout (>20 min)"
+        echo "✗ Timeout (>30 min)"
         rm "$temp_output"
         return 1
     else
@@ -116,14 +115,14 @@ show_progress() {
     printf "] %d%% (%d/%d)" $percentage $current $total
 }
 
-# Test configuration - incluye oversubscription para análisis educativo
+# Test configuration
 core_counts=(1 2 4 6 8 10 12 14 16 17)
 max_cores=$(nproc 2>/dev/null || echo "unknown")
 
 echo "System information:"
 echo "  - Available cores: $max_cores"
 echo "  - Testing cores: ${core_counts[*]}"
-echo "  - Timeout per test: 20 minutes"
+echo "  - Timeout per test: 30 minutes"
 echo
 
 # Verify we don't exceed available cores
@@ -145,7 +144,7 @@ declare -A times
 successful_runs=0
 total_runs=${#core_counts[@]}
 
-echo "Starting metrics runs..."
+echo "Starting interference metrics runs..."
 echo
 
 # Run metrics with progress tracking
@@ -279,36 +278,6 @@ if [ $successful_runs -ge 2 ]; then
     
     printf "Overall scalability: ${color}${scalability}\033[0m\n"
     
-    # Analyze oversubscription effects if applicable
-    if [ "$max_cores" != "unknown" ] && [ $max_cores_tested -gt $max_cores ]; then
-        echo
-        echo "=== OVERSUBSCRIPTION ANALYSIS ==="
-        echo "Physical cores available: $max_cores"
-        echo "Maximum cores tested: $max_cores_tested"
-        
-        # Find performance at physical limit vs oversubscribed
-        if [ -n "${times[$max_cores]}" ] && [ -n "${times[$max_cores_tested]}" ]; then
-            physical_speedup=${speedups[$max_cores]}
-            oversub_speedup=${speedups[$max_cores_tested]}
-            degradation=$(echo "scale=1; (($physical_speedup - $oversub_speedup) / $physical_speedup) * 100" | bc -l)
-            
-            echo "Performance at $max_cores cores: ${physical_speedup}x speedup"
-            echo "Performance at $max_cores_tested cores: ${oversub_speedup}x speedup"
-            echo "Oversubscription penalty: ${degradation}% performance loss"
-            
-            if [ $(echo "$degradation > 20" | bc -l) -eq 1 ]; then
-                echo "⚠ Significant oversubscription penalty observed"
-                echo "⚠ Recommend staying at or below $max_cores cores for this problem size"
-            elif [ $(echo "$degradation > 0" | bc -l) -eq 1 ]; then
-                echo "○ Moderate oversubscription penalty"
-                echo "○ Consider problem size scaling for better core utilization"
-            else
-                echo "✓ Minimal oversubscription penalty"
-                echo "✓ Problem may benefit from larger mesh/more computation per core"
-            fi
-        fi
-    fi
-    
     # Save summary to results file
     {
         echo ""
@@ -326,14 +295,13 @@ echo
 echo "======================================================="
 echo "                    Files Generated                    "
 echo "======================================================="
-echo "Results saved to:"
-echo "  📄 $RESULTS_FILE"
+echo "Results saved to: $RESULTS_FILE"
 echo
 echo "To analyze results further:"
 echo "  - View detailed results: cat '$RESULTS_FILE'"
 echo
 echo "======================================================="
-echo "                 Benchmark Complete!                   "
+echo "           Interference Benchmark Complete!           "
 echo "======================================================="
 
 # Display quick summary table for easy copy-paste

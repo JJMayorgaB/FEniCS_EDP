@@ -29,14 +29,14 @@ def solve_wave_equation_performance():
     k = np.pi    # Número de onda
     omega = k * v  # Frecuencia angular
     
-    # Parámetros temporales - configurables para diferentes tests
+    # Parámetros temporales - aumentados para mejor medición
     t = 0.0      # Tiempo inicial
-    T = 2.0      # Tiempo final reducido para tests rápidos
-    num_steps = 500  # Pasos reducidos para benchmark
+    T = 2.0      # Tiempo final
+    num_steps = 2000  # Más pasos para carga computacional significativa
     dt = T / num_steps
     
-    # Crear dominio 1D distribuido
-    nx = 200  # Malla más densa para mejor carga computacional
+    # Crear dominio 1D distribuido - malla más densa
+    nx = 1000  # Malla mucho más densa para mejor carga computacional
     domain = mesh.create_interval(comm, nx, [0.0, 2.0])
     V = fem.functionspace(domain, ("Lagrange", 1))
     
@@ -92,8 +92,25 @@ def solve_wave_equation_performance():
     # Vector para el lado derecho
     b = create_vector(fem.form(u * v_test * ufl.dx))
     
-    # Sincronizar antes de comenzar medición
+    # Sincronizar antes de comenzar medición y añadir warmup
     comm.Barrier()
+    
+    # Warmup: una iteración para preparar el sistema
+    if rank == 0:
+        print("Warming up...")
+    
+    # Pequeño warmup
+    for warm in range(2):
+        t_warm = warm * dt
+        f_warm = source_term(t_warm)
+        L_warm = ((2.0 * u_n1 - u_n2) * v_test * ufl.dx + 
+                  dt**2 * f_warm * v_test * ufl.dx)
+        linear_form_warm = fem.form(L_warm)
+    
+    comm.Barrier()
+    if rank == 0:
+        print("Starting actual computation...")
+    
     start_time = time.time()
     
     # Loop temporal principal - SIN visualización
