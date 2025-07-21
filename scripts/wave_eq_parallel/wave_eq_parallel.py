@@ -32,11 +32,11 @@ def solve_wave_equation_performance():
     # Parámetros temporales - aumentados para mejor medición
     t = 0.0      # Tiempo inicial
     T = 2.0      # Tiempo final
-    num_steps = 4000  # Más pasos para carga computacional significativa
+    num_steps = 2000  # Más pasos para carga computacional significativa
     dt = T / num_steps
     
     # Crear dominio 1D distribuido - malla más densa
-    nx = 1000  # Malla mucho más densa para mejor carga computacional
+    nx = 500  # Malla mucho más densa para mejor carga computacional
     domain = mesh.create_interval(comm, nx, [0.0, 2.0])
     V = fem.functionspace(domain, ("Lagrange", 1))
     
