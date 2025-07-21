@@ -9,12 +9,15 @@ import matplotlib as mpl
 from dolfinx import fem, mesh, io, plot
 from dolfinx.fem.petsc import assemble_vector, assemble_matrix, create_vector, apply_lifting, set_bc
 
-def solve_wave_equation_2d():
+def solve_wave_equation_2d(create_visualization=True):
     """
     Resuelve la ecuación de onda 2D:
     ∂²u/∂t² - v²(∂²u/∂x² + ∂²u/∂y²) = A·exp(-[(x-x₀)² + (y-y₀)²]/(2σ²))·cos(ωt)
     
     Usando el método de elementos finitos en espacio y diferencias finitas en tiempo.
+    
+    Args:
+        create_visualization (bool): Si True, crea frames para GIF. False para mayor velocidad.
     """
     
     # Parámetros físicos
@@ -95,13 +98,51 @@ def solve_wave_equation_2d():
     
     # Crear directorios de salida
     if MPI.COMM_WORLD.rank == 0:
-        os.makedirs("figures", exist_ok=True)
-        os.makedirs("post_data", exist_ok=True)
+        os.makedirs("figures/wave", exist_ok=True)
+        os.makedirs("post_data/wave", exist_ok=True)
     MPI.COMM_WORLD.barrier()  # Esperar a que se creen los directorios
     
-    # Configuración de PyVista
-    pyvista.OFF_SCREEN = True
-    pyvista.start_xvfb(wait=0.5)
+    # Configuración de PyVista solo si se requiere visualización
+    if create_visualization:
+        pyvista.OFF_SCREEN = True
+        pyvista.start_xvfb(wait=0.5)
+        
+        # Setup visualización 3D con PyVista
+        cells, types, x_coords = plot.vtk_mesh(V)
+        grid = pyvista.UnstructuredGrid(cells, types, x_coords)
+        
+        plotter = pyvista.Plotter(off_screen=True)
+        plotter.open_gif("figures/wave/wave_2d_propagation.gif", fps=8)  # Reducido de 10 a 8 fps
+        
+        # Configuración de colores y escala
+        colormap = mpl.colormaps.get_cmap("RdBu_r").resampled(50)
+        sargs = dict(title_font_size=20, label_font_size=15, fmt="%.3f", color="black",
+                     position_x=0.02, position_y=0.1, width=0.15, height=0.8)
+        
+        # Escala fija para visualización consistente
+        u_range = 0.8
+        grid.point_data["u"] = u_n1.x.array
+        
+        # Crear superficie deformada para visualización 3D
+        warped = grid.warp_by_scalar("u", factor=0.3)
+        
+        renderer = plotter.add_mesh(warped, show_edges=False, lighting=True,
+                                   cmap=colormap, scalar_bar_args=sargs,
+                                   clim=[-u_range, u_range], opacity=0.9)
+        
+        # Agregar malla de referencia en el plano
+        plotter.add_mesh(grid, style="wireframe", color="gray", opacity=0.1)  # Reducido opacity
+        
+        plotter.add_title("Propagación de Onda 2D", font_size=18, color="black")
+        plotter.show_axes()
+        
+        # Configurar vista isométrica
+        plotter.camera_position = [(1.5, 1.5, 1.0), (0.5, 0.5, 0.0), (0, 0, 1)]
+    else:
+        print("Modo rápido: visualización PyVista deshabilitada")
+        plotter = None
+        grid = None
+        warped = None
     
     # Definir funciones de forma y coordenadas
     u = ufl.TrialFunction(V)
@@ -123,46 +164,17 @@ def solve_wave_equation_2d():
          (dt**2 * v**2) * ufl.dot(ufl.grad(u), ufl.grad(v_test)) * ufl.dx)
     
     # Setup XDMF para salida
-    xdmf = io.XDMFFile(domain.comm, "post_data/wave_2d_solution.xdmf", "w")
+    xdmf = io.XDMFFile(domain.comm, "post_data/wave/wave_2d_solution.xdmf", "w")
     xdmf.write_mesh(domain)  # Escribir malla PRIMERO
-    
-    # Setup visualización 3D con PyVista
-    cells, types, x_coords = plot.vtk_mesh(V)
-    grid = pyvista.UnstructuredGrid(cells, types, x_coords)
-    
-    plotter = pyvista.Plotter(off_screen=True)
-    plotter.open_gif("figures/wave_2d_propagation.gif", fps=10)
-    
-    # Configuración de colores y escala
-    colormap = mpl.colormaps.get_cmap("RdBu_r").resampled(50)
-    sargs = dict(title_font_size=20, label_font_size=15, fmt="%.3f", color="black",
-                 position_x=0.02, position_y=0.1, width=0.15, height=0.8)
-    
-    # Escala fija para visualización consistente
-    u_range = 0.8
-    grid.point_data["u"] = u_n1.x.array
-    
-    # Crear superficie deformada para visualización 3D
-    warped = grid.warp_by_scalar("u", factor=0.3)
-    
-    renderer = plotter.add_mesh(warped, show_edges=False, lighting=True,
-                               cmap=colormap, scalar_bar_args=sargs,
-                               clim=[-u_range, u_range], opacity=0.9)
-    
-    # Agregar malla de referencia en el plano
-    plotter.add_mesh(grid, style="wireframe", color="gray", opacity=0.2)
-    
-    plotter.add_title("Propagación de Onda 2D", font_size=18, color="black")
-    plotter.show_axes()
-    
-    # Configurar vista isométrica
-    plotter.camera_position = [(1.5, 1.5, 1.0), (0.5, 0.5, 0.0), (0, 0, 1)]
     
     # Escribir condición inicial (DESPUÉS de escribir la malla)
     u_n.x.array[:] = u_n1.x.array
     u_n.name = "displacement"
     xdmf.write_function(u_n, t)
-    plotter.write_frame()
+    
+    # Escribir frame inicial solo si se requiere visualización
+    if create_visualization and plotter is not None:
+        plotter.write_frame()
     
     # Ensamblaje de la matriz del sistema
     bilinear_form = fem.form(a)
@@ -212,8 +224,8 @@ def solve_wave_equation_2d():
         solver.solve(b, u_n.x.petsc_vec)
         u_n.x.scatter_forward()
         
-        # Calcular energía total del sistema
-        if n % 10 == 0:
+        # Calcular energía total del sistema con menor frecuencia para mejor rendimiento
+        if n % 25 == 0:  # Reducido de cada 10 a cada 25 pasos
             # Energía cinética aproximada: (1/2) * (∂u/∂t)²
             u_dot_approx = (u_n.x.array - u_n1.x.array) / dt
             kinetic_energy = 0.5 * np.sum(u_dot_approx**2) * (1.0 / len(u_dot_approx))
@@ -230,32 +242,39 @@ def solve_wave_equation_2d():
         u_n2.x.array[:] = u_n1.x.array[:]
         u_n1.x.array[:] = u_n.x.array[:]
         
-        # Actualizar visualización y guardar datos
-        if n % 8 == 0:  # Cada 8 pasos para controlar tamaño del GIF
+        # Actualizar visualización y guardar datos - Optimizado
+        if n % 20 == 0:  # Reducido de cada 8 a cada 20 pasos para XDMF
+            xdmf.write_function(u_n, t)
+        
+        # Actualizar visualización PyVista solo si está habilitada y menos frecuente
+        if create_visualization and plotter is not None and n % 15 == 0:  # Frames cada 15 pasos
             grid.point_data["u"] = u_n.x.array
             warped_new = grid.warp_by_scalar("u", factor=0.3)
             warped.points[:, :] = warped_new.points
             warped.point_data["u"][:] = u_n.x.array
             
-            xdmf.write_function(u_n, t)
             plotter.write_frame()
         
-        # Mostrar progreso
-        if n % (num_steps // 20) == 0:
+        # Mostrar progreso menos frecuente
+        if n % (num_steps // 15) == 0:  # Reducido de 20 a 15 actualizaciones
             print(" ", end="", flush=True)
             max_displacement = np.max(np.abs(u_n.x.array))
-            if domain.comm.rank == 0 and n % (num_steps // 10) == 0:
+            if domain.comm.rank == 0 and n % (num_steps // 8) == 0:  # Menos mensajes detallados
                 print(f"\n  t={t:.3f}, |u|_max={max_displacement:.4f}")
     
     print("\n")
-    plotter.close()
+    
+    # Cerrar recursos de forma condicional
+    if create_visualization and plotter is not None:
+        plotter.close()
     xdmf.close()
     
     print("Simulación completada!")
     print(f"Archivos generados:")
-    print(f"  - Animación: figures/wave_2d_propagation.gif")
-    print(f"  - Datos: post_data/wave_2d_solution.xdmf")
-    print(f"  - Datos auxiliares: post_data/wave_2d_solution.h5")
+    if create_visualization:
+        print(f"  - Animación: figures/wave/wave_2d_propagation.gif")
+    print(f"  - Datos: post_data/wave/wave_2d_solution.xdmf")
+    print(f"  - Datos auxiliares: post_data/wave/wave_2d_solution.h5")
     
     return u_n, domain, energies, times
 
@@ -285,8 +304,9 @@ if __name__ == "__main__":
         # Análisis inicial
         analyze_wave_properties()
         
-        # Ejecutar simulación
-        u_final, domain, energies, times = solve_wave_equation_2d()
+        # Ejecutar simulación con visualización habilitada por defecto
+        # Para ejecución rápida, cambiar a: solve_wave_equation_2d(create_visualization=False)
+        u_final, domain, energies, times = solve_wave_equation_2d(create_visualization=True)
         
         # Estadísticas finales
         if domain.comm.rank == 0:

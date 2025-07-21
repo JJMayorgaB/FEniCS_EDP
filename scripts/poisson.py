@@ -53,7 +53,7 @@ problem = LinearProblem(a, L, bcs=[bc], petsc_options={"ksp_type": "preonly", "p
 uh = problem.solve()
 assert isinstance(uh, fem.Function)
 
-with io.XDMFFile(msh.comm, "post_data/poisson.xdmf", "w") as file:
+with io.XDMFFile(msh.comm, "post_data/poisson/poisson.xdmf", "w") as file:
     file.write_mesh(msh)
     file.write_function(uh)
 
@@ -63,8 +63,8 @@ try:
     print("Configurando PyVista para modo headless...")
     
     # Create directories if they don't exist
-    os.makedirs("figures", exist_ok=True)
-    os.makedirs("post_data", exist_ok=True)
+    os.makedirs("figures/poisson", exist_ok=True)
+    os.makedirs("post_data/poisson", exist_ok=True)
     
     pyvista.OFF_SCREEN = True
     pyvista.start_xvfb(wait=0.5)
@@ -79,8 +79,8 @@ try:
     warped = grid.warp_by_scalar()
     plotter.add_mesh(warped)
     
-    plotter.show(screenshot="figures/uh_poisson.png")
-    print("Imagen guardada como: figures/uh_poisson.png")
+    plotter.show(screenshot="figures/poisson/uh_poisson.png")
+    print("Imagen guardada como: figures/poisson/uh_poisson.png")
     
 except ModuleNotFoundError:
     print("'pyvista' is required to visualise the solution.")

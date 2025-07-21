@@ -9,12 +9,15 @@ import matplotlib as mpl
 from dolfinx import fem, mesh, io, plot
 from dolfinx.fem.petsc import assemble_vector, assemble_matrix, create_vector, apply_lifting, set_bc
 
-def solve_wave_equation():
+def solve_wave_equation(create_animation=True):
     """
     Resuelve la ecuación de onda:
     ∂²u/∂x² - (1/v²)∂²u/∂t² = A*sin(kx - ωt)
     
     Usando el método de diferencias finitas en tiempo con esquema de Newmark.
+    
+    Args:
+        create_animation (bool): Si True, crea frames para GIF. False para mayor velocidad.
     """
     
     # Parámetros físicos
@@ -64,31 +67,34 @@ def solve_wave_equation():
     # Simplificación: u^{n-1} ≈ u^n (velocidad inicial cero)
     
     # Crear directorio de salida
-    os.makedirs("figures", exist_ok=True)
-    os.makedirs("post_data", exist_ok=True)
+    os.makedirs("figures/wave", exist_ok=True)
+    os.makedirs("post_data/wave", exist_ok=True)
     
-    # Configuración para gráfico cartesiano en lugar de PyVista
-    import matplotlib.pyplot as plt
-    import imageio
-    
-    # Obtener coordenadas x para el gráfico
-    dofs_x = V.tabulate_dof_coordinates()[:, 0]  # Solo coordenada x
-    x_sorted_indices = np.argsort(dofs_x)
-    x_coords_sorted = dofs_x[x_sorted_indices]
-    
-    # Configurar matplotlib para modo no interactivo
-    plt.ioff()
-    
-    # Lista para almacenar frames del GIF
-    gif_frames = []
-    
-    # Configuración del gráfico
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_xlim(0, 2.0)
-    ax.set_ylim(-2.5, 2.5)
-    ax.set_xlabel('Posición x (m)', fontsize=12)
-    ax.set_ylabel('Desplazamiento u(x,t)', fontsize=12)
-    ax.grid(True, alpha=0.3)
+    # Configuración para gráfico cartesiano (solo si se necesita animación)
+    if create_animation:
+        import matplotlib.pyplot as plt
+        import imageio
+        
+        # Obtener coordenadas x para el gráfico
+        dofs_x = V.tabulate_dof_coordinates()[:, 0]  # Solo coordenada x
+        x_sorted_indices = np.argsort(dofs_x)
+        x_coords_sorted = dofs_x[x_sorted_indices]
+        
+        # Configurar matplotlib para modo no interactivo
+        plt.ioff()
+        
+        # Lista para almacenar frames del GIF
+        gif_frames = []
+        
+        # Configuración del gráfico
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.set_xlim(0, 2.0)
+        ax.set_ylim(-2.5, 2.5)
+        ax.set_xlabel('Posición x (m)', fontsize=12)
+        ax.set_ylabel('Desplazamiento u(x,t)', fontsize=12)
+        ax.grid(True, alpha=0.3)
+    else:
+        print("Modo rápido: animación deshabilitada")
     
     # Forma bilineal y lineal usando esquema de diferencias finitas en tiempo
     u = ufl.TrialFunction(V)
@@ -106,7 +112,7 @@ def solve_wave_equation():
          (dt**2 * v**2) * ufl.dot(ufl.grad(u), ufl.grad(v_test)) * ufl.dx)
     
     # Setup XDMF para salida
-    xdmf = io.XDMFFile(domain.comm, "post_data/wave_solution.xdmf", "w")
+    xdmf = io.XDMFFile(domain.comm, "post_data/wave/wave_solution.xdmf", "w")
     xdmf.write_mesh(domain)
     
     # Setup visualización
@@ -114,7 +120,7 @@ def solve_wave_equation():
     grid = pyvista.UnstructuredGrid(cells, types, x_coords)
     
     plotter = pyvista.Plotter(off_screen=True)
-    plotter.open_gif("figures/wave_propagation.gif", fps=20)
+    plotter.open_gif("figures/wave/wave_propagation.gif", fps=20)
     
     colormap = mpl.colormaps.get_cmap("seismic").resampled(25)
     sargs = dict(title_font_size=20, label_font_size=15, fmt="%.2f", color="black",
@@ -136,22 +142,23 @@ def solve_wave_equation():
     u_n.name = "displacement"
     xdmf.write_function(u_n, t)
     
-    # Crear frame inicial
-    u_values_sorted = u_n1.x.array[x_sorted_indices]
-    ax.clear()
-    ax.plot(x_coords_sorted, u_values_sorted, 'b-', linewidth=2, label=f't = {t:.3f} s')
-    ax.set_xlim(0, 2.0)
-    ax.set_ylim(-2.5, 2.5)
-    ax.set_xlabel('Posición x (m)', fontsize=12)
-    ax.set_ylabel('Desplazamiento u(x,t)', fontsize=12)
-    ax.set_title('Propagación de Onda 1D', fontsize=14)
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-    
-    # Guardar frame inicial
-    frame_filename = f"figures/frame_000.png"
-    plt.savefig(frame_filename, dpi=100, bbox_inches='tight')
-    gif_frames.append(frame_filename)
+    # Crear frame inicial solo si se requiere animación
+    if create_animation:
+        u_values_sorted = u_n1.x.array[x_sorted_indices]
+        ax.clear()
+        ax.plot(x_coords_sorted, u_values_sorted, 'b-', linewidth=2, label=f't = {t:.3f} s')
+        ax.set_xlim(0, 2.0)
+        ax.set_ylim(-2.5, 2.5)
+        ax.set_xlabel('Posición x (m)', fontsize=12)
+        ax.set_ylabel('Desplazamiento u(x,t)', fontsize=12)
+        ax.set_title('Propagación de Onda 1D', fontsize=14)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        # Guardar frame inicial con DPI optimizado
+        frame_filename = f"figures/wave/frame_000.png"
+        plt.savefig(frame_filename, dpi=80, bbox_inches='tight')
+        gif_frames.append(frame_filename)
     
     # Ensamblaje de matrices
     bilinear_form = fem.form(a)
@@ -169,7 +176,7 @@ def solve_wave_equation():
     
     print("Comenzando simulación de la ecuación de onda...")
     
-    # Loop temporal
+    # Loop temporal - Optimizado para reducir overhead de visualización
     for n in range(1, num_steps + 1):
         t = n * dt
         
@@ -200,11 +207,13 @@ def solve_wave_equation():
         u_n2.x.array[:] = u_n1.x.array
         u_n1.x.array[:] = u_n.x.array
         
-        # Crear frame para GIF cada pocos pasos
-        if n % 5 == 0:
+        # Escritura de datos reducida - solo cada 20 pasos
+        if n % 20 == 0:
             xdmf.write_function(u_n, t)
-            
-            # Crear gráfico cartesiano
+        
+        # Crear frame para GIF cada 10 pasos para reducir overhead (solo si se requiere)
+        if create_animation and n % 10 == 0:
+            # Crear gráfico cartesiano optimizado
             u_values_sorted = u_n.x.array[x_sorted_indices]
             ax.clear()
             ax.plot(x_coords_sorted, u_values_sorted, 'b-', linewidth=2, label=f't = {t:.3f} s')
@@ -216,32 +225,56 @@ def solve_wave_equation():
             ax.grid(True, alpha=0.3)
             ax.legend()
             
-            # Guardar frame
-            frame_filename = f"figures/frame_{len(gif_frames):03d}.png"
-            plt.savefig(frame_filename, dpi=100, bbox_inches='tight')
+            # Guardar frame con menor DPI para velocidad
+            frame_filename = f"figures/wave/frame_{len(gif_frames):03d}.png"
+            plt.savefig(frame_filename, dpi=80, bbox_inches='tight')
             gif_frames.append(frame_filename)
+        
+        # Progreso menos frecuente
+        if n % 100 == 0:
+            print(f"Tiempo: {t:.3f}, Máximo desplazamiento: {np.max(np.abs(u_n.x.array)):.3f}")
+    
+    # Crear GIF solo si se requiere animación
+    if create_animation and gif_frames:
+        # Crear GIF de forma más eficiente
+        print(f"Creando animación GIF desde {len(gif_frames)} frames...")
+        
+        # Usar compresión y duración optimizada para archivos más pequeños
+        with imageio.get_writer("figures/wave/wave_propagation.gif", mode='I', duration=0.15, subrectangles=True) as writer:
+            for frame_file in gif_frames:
+                if os.path.exists(frame_file):
+                    image = imageio.imread(frame_file)
+                    writer.append_data(image)
+        
+        # Limpiar frames temporales de forma optimizada
+        if len(gif_frames) > 50:
+            import threading
+            def cleanup_frames(frame_list):
+                for frame_file in frame_list:
+                    if os.path.exists(frame_file):
+                        os.remove(frame_file)
             
-            if n % 20 == 0:
-                print(f"Tiempo: {t:.3f}, Máximo desplazamiento: {np.max(np.abs(u_n.x.array)):.3f}")
+            cleanup_thread = threading.Thread(target=cleanup_frames, args=(gif_frames,))
+            cleanup_thread.start()
+            cleanup_thread.join()
+        else:
+            for frame_file in gif_frames:
+                if os.path.exists(frame_file):
+                    os.remove(frame_file)
+        
+        plt.close(fig)
     
-    # Crear GIF a partir de los frames
-    print("Creando animación GIF...")
-    with imageio.get_writer("figures/wave_propagation.gif", mode='I', duration=0.1) as writer:
-        for frame_file in gif_frames:
-            image = imageio.imread(frame_file)
-            writer.append_data(image)
-    
-    # Limpiar frames temporales
-    for frame_file in gif_frames:
-        os.remove(frame_file)
-    
-    plt.close(fig)
+    elif create_animation:
+        print("No se crearon frames para la animación")
+    else:
+        print("Animación deshabilitada - simulación completada más rápido")
     xdmf.close()
     
     print("Simulación completada!")
     print(f"Archivos generados:")
-    print(f"  - Animación: figures/wave_propagation.gif")
-    print(f"  - Datos: post_data/wave_solution.xdmf")
+    if create_animation and gif_frames:
+        print(f"  - Animación: figures/wave/wave_propagation.gif")
+    print(f"  - Datos: post_data/wave/wave_solution.xdmf")
     
     return u_n, domain
 
@@ -261,7 +294,10 @@ def analyze_wave_solution():
 if __name__ == "__main__":
     try:
         analyze_wave_solution()
-        u_final, domain = solve_wave_equation()
+        
+        # Llamar con animación habilitada por defecto
+        # Para ejecución rápida, cambiar a: solve_wave_equation(create_animation=False)
+        u_final, domain = solve_wave_equation(create_animation=True)
         
     except Exception as e:
         print(f"Error durante la ejecución: {e}")

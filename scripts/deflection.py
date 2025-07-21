@@ -3,8 +3,8 @@ import numpy as np
 import os
 
 # Create directories if they don't exist
-os.makedirs("figures", exist_ok=True)
-os.makedirs("post_data", exist_ok=True)
+os.makedirs("figures/deflection", exist_ok=True)
+os.makedirs("post_data/deflection", exist_ok=True)
 
 gmsh.initialize()
 
@@ -85,9 +85,9 @@ try:
 
     plotter = pyvista.Plotter(off_screen=True)
     plotter.add_mesh(warped, show_edges=True, show_scalar_bar=True, scalars="u")
-    plotter.screenshot("figures/deflection.png")
+    plotter.screenshot("figures/deflection/deflection.png")
     plotter.close()
-    print("Imagen de deflexión guardada como: figures/deflection.png")
+    print("Imagen de deflexión guardada como: figures/deflection/deflection.png")
 
     load_plotter = pyvista.Plotter(off_screen=True)
     p_grid = pyvista.UnstructuredGrid(*vtk_mesh(Q))
@@ -96,9 +96,9 @@ try:
     warped_p.set_active_scalars("p")
     load_plotter.add_mesh(warped_p, show_scalar_bar=True)
     load_plotter.view_xy()
-    load_plotter.screenshot("figures/load.png")
+    load_plotter.screenshot("figures/deflection/load.png")
     load_plotter.close()
-    print("Imagen de carga guardada como: figures/load.png")
+    print("Imagen de carga guardada como: figures/deflection/load.png")
 
 except ModuleNotFoundError:
     print("'pyvista' is required to visualise the solution.")
@@ -149,7 +149,7 @@ plt.grid(True)
 plt.xlabel("y")
 plt.legend()
 
-plt.savefig(f"figures/membrane_rank{MPI.COMM_WORLD.rank:d}.png")
+plt.savefig(f"figures/deflection/membrane_rank{MPI.COMM_WORLD.rank:d}.png")
 
 
 import dolfinx.io
@@ -157,7 +157,7 @@ from pathlib import Path
 
 pressure.name = "Load"
 uh.name = "Deflection"
-results_folder = Path("post_data/results_membrane")
+results_folder = Path("post_data/deflection")
 results_folder.mkdir(exist_ok=True, parents=True)
 with dolfinx.io.VTXWriter(
     MPI.COMM_WORLD, results_folder / "membrane_pressure.bp", [pressure], engine="BP4"

@@ -39,7 +39,7 @@ boundary_facets = mesh.locate_entities_boundary(
 bc = fem.dirichletbc(PETSc.ScalarType(0), fem.locate_dofs_topological(V, fdim, boundary_facets), V)
 
 
-xdmf = io.XDMFFile(domain.comm, "post_data/diffusion.xdmf", "w")
+xdmf = io.XDMFFile(domain.comm, "post_data/diffusion/diffusion.xdmf", "w")
 xdmf.write_mesh(domain)
 
 
@@ -67,8 +67,8 @@ solver.setType(PETSc.KSP.Type.PREONLY)
 solver.getPC().setType(PETSc.PC.Type.LU)
 
 # Create directories if they don't exist
-os.makedirs("figures", exist_ok=True)
-os.makedirs("post_data", exist_ok=True)
+os.makedirs("figures/diffusion", exist_ok=True)
+os.makedirs("post_data/diffusion", exist_ok=True)
 
 pyvista.OFF_SCREEN = True
 pyvista.start_xvfb(wait=0.5)
@@ -77,7 +77,7 @@ cells, types, x = plot.vtk_mesh(V)
 grid = pyvista.UnstructuredGrid(cells, types, x)
 
 plotter = pyvista.Plotter(off_screen=True)
-plotter.open_gif("figures/u_time.gif", fps=20)
+plotter.open_gif("figures/diffusion/u_time.gif", fps=20)
 
 grid.point_data["uh"] = uh.x.array
 warped = grid.warp_by_scalar("uh", factor=1)

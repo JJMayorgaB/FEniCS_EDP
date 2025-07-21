@@ -60,8 +60,8 @@ solver.setType(PETSc.KSP.Type.PREONLY)
 solver.getPC().setType(PETSc.PC.Type.LU)
 
 # Create directories if they don't exist
-os.makedirs("figures", exist_ok=True)
-os.makedirs("post_data", exist_ok=True)
+os.makedirs("figures/heat", exist_ok=True)
+os.makedirs("post_data/heat", exist_ok=True)
 
 # Setup PyVista visualization
 pyvista.OFF_SCREEN = True
@@ -71,10 +71,10 @@ cells, types, x = plot.vtk_mesh(V)
 grid = pyvista.UnstructuredGrid(cells, types, x)
 
 plotter = pyvista.Plotter(off_screen=True)
-plotter.open_gif("figures/heat_solution.gif", fps=10)
+plotter.open_gif("figures/heat/heat_solution.gif", fps=10)
 
 # Setup XDMF output
-xdmf = io.XDMFFile(domain.comm, "post_data/heat_solution.xdmf", "w")
+xdmf = io.XDMFFile(domain.comm, "post_data/heat/heat_solution.xdmf", "w")
 xdmf.write_mesh(domain)
 
 # Initial visualization setup

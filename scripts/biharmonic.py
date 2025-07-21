@@ -64,7 +64,7 @@ L = inner(f, v) * dx
 problem = LinearProblem(a, L, bcs=[bc], petsc_options={"ksp_type": "preonly", "pc_type": "lu"})
 uh = problem.solve()
 
-with io.XDMFFile(msh.comm, "post_data/out_biharmonic/biharmonic.xdmf", "w") as file:
+with io.XDMFFile(msh.comm, "post_data/biharmonic/biharmonic.xdmf", "w") as file:
     V1 = fem.functionspace(msh, ("Lagrange", 1))
     u1 = fem.Function(V1)
     u1.interpolate(uh)
@@ -77,8 +77,8 @@ try:
     print("Configurando PyVista para modo headless...")
     
     # Create directories if they don't exist
-    os.makedirs("figures", exist_ok=True)
-    os.makedirs("post_data", exist_ok=True)
+    os.makedirs("figures/biharmonic", exist_ok=True)
+    os.makedirs("post_data/biharmonic", exist_ok=True)
     
     pyvista.OFF_SCREEN = True
     pyvista.start_xvfb(wait=0.5)
@@ -95,8 +95,8 @@ try:
     plotter.add_mesh(warped)
     
     # Tomar screenshot
-    plotter.show(screenshot="figures/biharmonic.png")
-    print("Imagen guardada como: figures/biharmonic.png")
+    plotter.show(screenshot="figures/biharmonic/biharmonic.png")
+    print("Imagen guardada como: figures/biharmonic/biharmonic.png")
     
 except ModuleNotFoundError:
     print("'pyvista' is required to visualise the solution.")

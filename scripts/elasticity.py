@@ -55,8 +55,8 @@ problem = LinearProblem(a, L, bcs=[bc], petsc_options={"ksp_type": "preonly", "p
 uh = problem.solve()
 
 # Create directories if they don't exist
-os.makedirs("figures", exist_ok=True)
-os.makedirs("post_data", exist_ok=True)
+os.makedirs("figures/elasticity", exist_ok=True)
+os.makedirs("post_data/elasticity", exist_ok=True)
 
 pyvista.OFF_SCREEN = True
 pyvista.start_xvfb(wait=0.5)
@@ -75,9 +75,9 @@ p.show_axes()
 if not pyvista.OFF_SCREEN:
     p.show()
 else:
-    figure_as_array = p.screenshot("figures/deflection.png")
+    figure_as_array = p.screenshot("figures/elasticity/deflection.png")
 
-with io.XDMFFile(domain.comm, "post_data/deformation.xdmf", "w") as xdmf:
+with io.XDMFFile(domain.comm, "post_data/elasticity/deformation.xdmf", "w") as xdmf:
     xdmf.write_mesh(domain)
     uh.name = "Deformation"
     xdmf.write_function(uh)
@@ -99,4 +99,4 @@ p.show_axes()
 if not pyvista.OFF_SCREEN:
     p.show()
 else:
-    stress_figure = p.screenshot(f"figures/stresses.png")
+    stress_figure = p.screenshot(f"figures/elasticity/stresses.png")

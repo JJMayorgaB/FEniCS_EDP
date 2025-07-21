@@ -113,8 +113,8 @@ def solve_wave_diffraction_2d():
     
     # Crear directorios
     if MPI.COMM_WORLD.rank == 0:
-        os.makedirs("figures", exist_ok=True)
-        os.makedirs("post_data", exist_ok=True)
+        os.makedirs("figures/wave", exist_ok=True)
+        os.makedirs("post_data/wave", exist_ok=True)
     MPI.COMM_WORLD.barrier()
     
     # Configuración de PyVista
@@ -147,7 +147,7 @@ def solve_wave_diffraction_2d():
          (dt**2 * v**2) * ufl.dot(ufl.grad(u), ufl.grad(v_test)) * ufl.dx)
 
     # Setup archivos de salida
-    xdmf = io.XDMFFile(domain.comm, "post_data/wave_diffraction_2d.xdmf", "w")
+    xdmf = io.XDMFFile(domain.comm, "post_data/wave/wave_diffraction_2d.xdmf", "w")
     xdmf.write_mesh(domain)
     
     # Setup visualización
@@ -162,7 +162,7 @@ def solve_wave_diffraction_2d():
     grid.point_data["obstacle"] = obstacle_mask
     
     plotter = pyvista.Plotter(off_screen=True)
-    plotter.open_gif("figures/wave_diffraction_2d.gif", fps=15)
+    plotter.open_gif("figures/wave/wave_diffraction_2d.gif", fps=15)
     
     # Configuración de visualización
     colormap = mpl.colormaps.get_cmap("seismic").resampled(50)
@@ -301,9 +301,9 @@ def solve_wave_diffraction_2d():
     
     print("¡Simulación completada!")
     print(f"\nArchivos generados:")
-    print(f"  • Animación: figures/wave_diffraction_2d.gif")
-    print(f"  • Datos XDMF: post_data/wave_diffraction_2d.xdmf")
-    print(f"  • Datos HDF5: post_data/wave_diffraction_2d.h5")
+    print(f"  • Animación: figures/wave/wave_diffraction_2d.gif")
+    print(f"  • Datos XDMF: post_data/wave/wave_diffraction_2d.xdmf")
+    print(f"  • Datos HDF5: post_data/wave/wave_diffraction_2d.h5")
     
     return u_n, domain, max_displacements, times_recorded
 
