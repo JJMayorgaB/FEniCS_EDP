@@ -59,6 +59,7 @@ RUN python3 -m pip install --no-cache-dir \
     jupyter \
     jupyterlab \
     ipywidgets \
+    imageio \
     trame \
     trame-vuetify \
     trame-vtk
