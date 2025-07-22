@@ -18,9 +18,15 @@ FEniCS_EDP/
 │   ├── deflection.py                # Deflexión de membrana
 │   ├── interpolation_parallel.py    # Interpolación paralela con MPI
 │   ├── wave_eq_parallel/           # Versiones paralelas de ecuación de onda
-│   │   └── metrics.sh              # Script de métricas de rendimiento
+│   │   ├── wave_eq_parallel.py     # Script optimizado para metricas paralelas
+│   │   ├── metrics.sh              # Script de métricas de wave_eq_parallel.py
+│   │   ├── metrics_figure.py       # Generador de gráficas de métricas
+│   │   └── metrics_results/        # Resultados de benchmarks
 │   └── interference_parallel/      # Versiones paralelas de interferencia
-│       └── interference_metrics.sh # Script de métricas de interferencia
+│       ├── interference_parallel.py # Script optimizado para metricas paralelas
+│       ├── interference_metrics.sh # Script de métricas de interference_parallel.py
+│       ├── metrics_figure.py       # Generador de gráficas de métricas
+│       └── interference_results/   # Resultados de benchmarks
 ├── figures/                         # Imágenes y animaciones generadas
 │   ├── wave/                       # Visualizaciones de ondas
 │   ├── heat/                       # Visualizaciones de ecuación del calor
@@ -28,7 +34,8 @@ FEniCS_EDP/
 │   ├── poisson/                    # Visualizaciones de Poisson
 │   ├── biharmonic/                 # Visualizaciones biharmonicas
 │   ├── deflection/                 # Visualizaciones de deflexión
-│   └── interpolation/              # Visualizaciones de interpolación
+│   ├── interpolation/              # Visualizaciones de interpolación
+│   └── metrics/                    # Gráficas de métricas paralelas
 ├── post_data/                      # Datos de post-procesamiento (XDMF/HDF5)
 │   ├── wave/                       # Datos de simulaciones de ondas
 │   ├── heat/                       # Datos de ecuación del calor
@@ -290,281 +297,81 @@ mpirun -np 8 python3 scripts/interpolation_parallel.py
 bash run_parallel.sh
 ```
 
-### Métricas de Rendimiento
+### 📊 Análisis de Métricas de Rendimiento Paralelo
+
+El repositorio incluye scripts automatizados para evaluar el rendimiento paralelo de las simulaciones:
 
 #### Para Ecuación de Onda:
 ```bash
 cd scripts/wave_eq_parallel/
+
+# 1. Ejecutar benchmarks automáticos (múltiples núcleos)
 bash metrics.sh
+
+# 2. Generar gráficas de speedup y eficiencia
+python3 metrics_figure.py
 ```
 
-#### Para Interferencia:
+#### Para Interferencia de Ondas:
 ```bash
 cd scripts/interference_parallel/
+
+# 1. Ejecutar benchmarks automáticos (múltiples núcleos)
 bash interference_metrics.sh
+
+# 2. Generar gráficas de speedup y eficiencia
+python3 metrics_figure.py
 ```
 
-Estos scripts automáticamente:
-- Ejecutan las simulaciones con 1, 2, 4, 6, 8, 10, 12, 14, 16, 17 núcleos
-- Calculan speedup y eficiencia paralela
-- Generan reportes de rendimiento
-- Identifican efectos de oversubscription
+### 📈 Resultados y Análisis
 
-**Archivos generados:**
-- `metrics_results/wave_performance_YYYYMMDD_HHMMSS.txt`
-- `interference_results/interference_performance_YYYYMMDD_HHMMSS.txt`
+Los scripts de métricas automáticamente:
+- ✅ Ejecutan las simulaciones con 1, 2, 4, 6, 8, 10, 12, 14, 16, 17 núcleos
+- ✅ Calculan **speedup** y **eficiencia paralela**
+- ✅ Identifican efectos de **oversubscription**
+- ✅ Generan reportes de rendimiento detallados
+- ✅ Crean **gráficas comparativas automáticas**
 
-## 📊 Visualización y Post-procesamiento
+#### 📄 Archivos de Resultados Generados
 
-### Formatos de Salida
+**Datos de Métricas (formato TXT):**
+- `scripts/wave_eq_parallel/metrics_results/wave_performance_YYYYMMDD_HHMMSS.txt`
+- `scripts/interference_parallel/interference_results/interference_performance_YYYYMMDD_HHMMSS.txt`
 
-1. **XDMF/HDF5** (.xdmf + .h5): Para ParaView/VisIt
-2. **GIF** (.gif): Animaciones para documentación
-3. **PNG** (.png): Imágenes estáticas
-4. **TXT** (.txt): Datos de métricas de rendimiento
-
-### Visualización con ParaView
-
-```bash
-# Abrir archivos XDMF en ParaView
-paraview post_data/wave/wave_solution.xdmf
-paraview post_data/wave/wave_interference_2d.xdmf
+**Formato de datos:**
+```
+cores    speedup    efficiency(%)
+    1       1.00         100.0
+    2      17.91         890.0
+    4      17.43         430.0
+    6      13.57         220.0
+    8      10.90         130.0
+   10       9.54          90.0
+   12       8.44          70.0
+   14       4.74          30.0
+   16       0.86           0.0
 ```
 
-### Visualización Programática
+**Gráficas de Rendimiento (formato PNG):**
+- `figures/metrics/wave_eq_metrics_summary_YYYYMMDD_HHMMSS.png`
+- `figures/metrics/interference_metrics_summary_YYYYMMDD_HHMMSS.png`
 
-Los scripts incluyen visualización automática con PyVista:
-- Renderizado headless (sin display)
-- Generación automática de GIFs
-- Escalas de color optimizadas
-- Vistas isométricas configuradas
+Las gráficas incluyen:
+- 📈 **Curva de Speedup**: Speedup medido vs. speedup ideal
+- 📉 **Curva de Eficiencia**: Porcentaje de eficiencia vs. número de núcleos
+- 🎯 **Análisis visual** de puntos óptimos de escalabilidad
 
-## 🔧 Configuración y Optimización
+## 🧮 Metodología Híbrida FEM-FDM y Paralelización MPI
 
-### Variables de Entorno
+### 🔸 Proceso de Paralelización
 
-```bash
-# Para renderizado headless
-export PYVISTA_OFF_SCREEN=true
-export DISPLAY=:99
-
-# Para MPI
-export OMPI_ALLOW_RUN_AS_ROOT=1
-export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
-
-# Para Mesa (software rendering)
-export MESA_GL_VERSION_OVERRIDE=3.3
-export LIBGL_ALWAYS_SOFTWARE=1
-```
-
-### Parámetros de Simulación
-
-Cada script incluye parámetros configurables al inicio:
-
-```python
-# Ejemplo de wave_eq.py
-v = 2.0          # Velocidad de onda
-A = 1.0          # Amplitud
-num_steps = 1000 # Pasos temporales
-nx = 100         # Resolución espacial
-```
-
-### Optimización de Rendimiento
-
-1. **Deshabilitar visualización** para mayor velocidad:
-   ```python
-   solve_function(create_visualization=False)
-   ```
-
-2. **Ajustar resolución** según recursos disponibles
-3. **Usar más núcleos** para problemas grandes
-4. **Monitorear número de Courant** para estabilidad
-
-## 🐛 Solución de Problemas
-
-### Problemas Comunes
-
-1. **Error de construcción Apptainer**:
-   ```bash
-   # Verificar versión de Apptainer
-   apptainer version
-   
-   # Limpiar caché si hay problemas
-   apptainer cache clean
-   ```
-
-2. **Error de display en contenedores**:
-   ```bash
-   # Dentro del contenedor
-   export DISPLAY=:99
-   Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &
-   sleep 2
-   ```
-
-3. **Error de MPI**:
-   ```bash
-   export OMPI_ALLOW_RUN_AS_ROOT=1
-   ```
-
-4. **Error de permisos en scripts**:
-   ```bash
-   chmod +x *.sh
-   chmod +x scripts/*/*.sh
-   ```
-
-### Verificación de Contenedores
-
-**Para Docker:**
-```bash
-# Verificar que la imagen se construyó correctamente
-docker images | grep fenics-edp
-
-# Verificar que el contenedor puede ejecutarse
-docker run --rm fenics-edp python3 -c "import dolfinx; print('OK')"
-```
-
-**Para Apptainer:**
-```bash
-# Verificar que el archivo SIF existe
-ls -la fenics.sif
-
-# Verificar que el contenedor funciona
-apptainer exec fenics.sif python3 -c "import dolfinx; print('OK')"
-```
-
-## 📚 Referencias y Documentación
-
-### Recursos Principales
-- **[FEniCSx Tutorial](https://jsdokken.com/dolfinx-tutorial/index.html)** - Tutorial principal de Jørgen S. Dokken (fuente de varios scripts)
-- **Scripts de Ondas**: Implementaciones propias para este proyecto académico
-
-### Tecnologías de Contenedores
-- [Docker Documentation](https://docs.docker.com/)
-- [Apptainer Documentation](https://apptainer.org/docs/)
-- [FEniCS Container Guide](https://github.com/FEniCS/dolfinx)
-
-### Documentación Oficial
-- [FEniCS Project](https://fenicsproject.org/)
-- [DOLFINx Documentation](https://docs.fenicsproject.org/)
-- [PyVista Documentation](https://docs.pyvista.org/)
-
-### Ecuaciones Implementadas
-
-1. **Ecuación de Onda**: Propagación de ondas acústicas/electromagnéticas
-2. **Ecuación del Calor**: Transferencia de calor por conducción
-3. **Ecuación de Poisson**: Problemas de potencial electrostático
-4. **Ecuación Biharmonica**: Problemas de placas y vigas
-5. **Difusión**: Procesos de transporte molecular
-
-### Métodos Numéricos
-
-- **Espacial**: Método de Elementos Finitos (FEM)
-- **Temporal**: Diferencias Finitas (esquemas implícitos)
-- **Solvers**: PETSc con precondicionadores
-- **Parallelización**: Domain decomposition con MPI
-
-## 🧮 Metodología Híbrida FEM-FDM en Scripts de Ondas
-
-### Enfoque Innovador: Combinación FEM + FDM
-
-Los scripts de ondas (`wave_eq.py`, `gaussianwave2d.py`, `interference.py`, `diffraction.py`) implementan una **metodología híbrida** que combina las fortalezas de ambos métodos numéricos:
-
-#### 🔸 **Discretización Espacial: Elementos Finitos (FEM)**
-
-```python
-# Espacio de elementos finitos P1 (Lagrange lineales)
-V = fem.functionspace(domain, ("Lagrange", 1))
-
-# Forma bilineal para el laplaciano espacial
-u = ufl.TrialFunction(V)
-v = ufl.TestFunction(V)
-a_spatial = ufl.dot(ufl.grad(u), ufl.grad(v)) * ufl.dx
-```
-
-**Ventajas de FEM para la parte espacial:**
-- **Flexibilidad geométrica**: Manejo natural de dominios complejos y obstáculos
-- **Condiciones de frontera**: Implementación directa de condiciones Dirichlet/Neumann
-- **Precisión local**: Refinamiento adaptativo posible
-- **Conservación**: Propiedades de conservación inherentes
-
-#### 🔸 **Discretización Temporal: Diferencias Finitas (FDM)**
-
-```python
-# Esquema de Newmark implícito para ecuaciones de segundo orden
-# (u^{n+1} - 2u^n + u^{n-1})/dt² = v²∇²u^{n+1} + f^{n+1}
-
-# Reorganizando: u^{n+1} - dt²v²∇²u^{n+1} = 2u^n - u^{n-1} + dt²f^{n+1}
-a = (u * v_test * ufl.dx + 
-     (dt**2 * v**2) * ufl.dot(ufl.grad(u), ufl.grad(v_test)) * ufl.dx)
-
-L = ((2.0 * u_n1 - u_n2) * v_test * ufl.dx + 
-     dt**2 * f_current * v_test * ufl.dx)
-```
-
-**Ventajas de FDM para la parte temporal:**
-- **Estabilidad**: Esquemas implícitos incondicionalmente estables
-- **Eficiencia**: Una sola matriz a ensamblar (independiente del tiempo)
-- **Simplicidad**: Implementación directa para ecuaciones hiperbólicas
-- **Control de estabilidad**: Fácil monitoreo del número de Courant
-
-#### 🔸 **Sistema Híbrido Resultante**
-
-La ecuación de onda se discretiza como:
-
-```
-[M + dt²v²K] u^{n+1} = M(2u^n - u^{n-1}) + dt²F^{n+1}
-```
-
-Donde:
-- **M**: Matriz de masa (FEM)
-- **K**: Matriz de rigidez/laplaciano (FEM)  
-- **F**: Vector de fuerzas (evaluado en cada paso temporal)
-- **dt**: Paso temporal (FDM)
-
-### Estabilidad y Convergencia
-
-#### Condición CFL Generalizada
-```python
-# Cálculo automático del número de Courant
-hx = domain_width / nx
-hy = domain_height / ny
-h = min(hx, hy)  # Tamaño característico de elemento
-courant_number = v * dt / h
-
-if courant_number > 1.0:
-    print("⚠️ ADVERTENCIA: C > 1, posible inestabilidad")
-```
-
-**Ventajas del esquema híbrido:**
-- **CFL menos restrictiva**: El esquema implícito relaja la condición de estabilidad
-- **Preservación de energía**: El método conserva aproximadamente la energía total
-- **Dispersión mínima**: Errores de dispersión controlados por FEM espacial
-
-## 🚀 Paralelización con MPI
-
-### Estrategia de Domain Decomposition
-
-La paralelización se implementa mediante **descomposición de dominio automática** de DOLFINx:
-
-#### 🔸 **Particionamiento Automático**
-
-```python
-# DOLFINx automáticamente distribuye la malla entre procesos MPI
-domain = mesh.create_rectangle(
-    MPI.COMM_WORLD,  # Comunicador MPI
-    [np.array([0.0, 0.0]), np.array([2.0, 1.0])],
-    [nx, ny], 
-    cell_type=mesh.CellType.triangle
-)
-```
-
-**Proceso de paralelización:**
-1. **Particionamiento**: La malla se divide en subdominios
-2. **Distribución**: Cada proceso MPI recibe una porción
+**Domain Decomposition Automático:**
+1. **Particionamiento**: La malla se divide en subdominios 
+2. **Distribución**: Cada proceso MPI recibe una porción balanceada
 3. **Comunicación**: Intercambio de datos en fronteras entre subdominios
 4. **Sincronización**: Operaciones colectivas para ensamblaje y solución
 
-#### 🔸 **Operaciones Paralelas Clave**
+### 🔸 Operaciones Paralelas Clave
 
 ```python
 # Ensamblaje distribuido de matrices
@@ -580,11 +387,9 @@ solver.solve(b, u_n.x.petsc_vec)
 u_n.x.scatter_forward()  # Actualización de valores fantasma
 ```
 
-### Análisis de Rendimiento Paralelo
+### 🔸 Métricas de Rendimiento Implementadas
 
-#### 🔸 **Métricas Implementadas**
-
-Los scripts `metrics.sh` calculan automáticamente:
+Los scripts de métricas calculan automáticamente:
 
 ```bash
 # Speedup: S(p) = T(1) / T(p)
@@ -597,7 +402,17 @@ efficiency = (speedup / num_cores) * 100
 # Escalabilidad débil: Problema crece con cores
 ```
 
-#### 🔸 **Factores que Afectan la Escalabilidad**
+**Interpretación de Métricas:**
+- **Speedup (S)**: `S(p) = T(1) / T(p)`
+  - **Ideal**: S = p (línea roja punteada en gráficas)
+  - **Real**: Generalmente S < p debido a overhead paralelo
+- **Eficiencia (E)**: `E(p) = S(p) / p × 100%`
+  - **Excelente**: E > 80%
+  - **Buena**: 60% < E ≤ 80%
+  - **Aceptable**: 40% < E ≤ 60%
+  - **Pobre**: E ≤ 40%
+
+### 🔸 Factores que Afectan la Escalabilidad
 
 **✅ Ventajas para paralelización:**
 - **Computación dominante**: Ensamblaje y solución de sistemas lineales
@@ -610,7 +425,7 @@ efficiency = (speedup / num_cores) * 100
 - **I/O secuencial**: Escritura de archivos de visualización
 - **Oversubscription**: Degradación al exceder cores físicos
 
-#### 🔸 **Optimizaciones Implementadas**
+### 🔸 Optimizaciones Implementadas
 
 ```python
 # 1. Reducción de comunicación I/O
@@ -626,12 +441,9 @@ if n % 25 == 0:  # Monitoreo menos frecuente
     total_energy = kinetic_energy + potential_energy
 ```
 
-### Configuración para HPC
+### 🔸 Técnicas Avanzadas de Paralelización
 
-### Técnicas Avanzadas de Paralelización
-
-#### 🔸 **Precondicionadores Paralelos**
-
+**Precondicionadores Paralelos:**
 ```python
 # Configuración optimizada para parallel performance
 solver = PETSc.KSP().create(domain.comm)
@@ -640,13 +452,43 @@ solver.getPC().setType(PETSc.PC.Type.HYPRE)  # Precondicionador AMG paralelo
 solver.setTolerances(rtol=1e-8)
 ```
 
-#### 🔸 **Balanceado de Carga Dinámico**
-
+**Balanceado de Carga Dinámico:**
 ```python
 # DOLFINx maneja automáticamente:
 # - Particionamiento balanceado usando METIS/ParMETIS
 # - Migración de datos entre procesos si necesario
 # - Optimización de comunicación fantasma
+```
+
+### 📋 Ejemplo de Reporte Automático
+
+El script `metrics.sh` genera reportes como:
+
+```
+=======================================================
+                Performance Analysis                   
+=======================================================
+Baseline: 1 cores, 45.2341s
+
+Cores  | Time(s)    | Speedup | Efficiency% | Notes
+-------|------------|---------|-------------|----------
+     1 |    45.2341 |     1.00|       100.0 | (baseline)
+     2 |     2.5234 |    17.91|       890.0 | excellent
+     4 |     2.5943 |    17.43|       430.0 | excellent
+     6 |     3.3341 |    13.57|       220.0 | good
+     8 |     4.1504 |    10.90|       130.0 | good
+    10 |     4.7403 |     9.54|        90.0 | good
+    12 |     5.3569 |     8.44|        70.0 | fair
+    14 |     9.5436 |     4.74|        30.0 | poor
+    16 |    52.6123 |     0.86|         0.0 | poor
+
+=======================================================
+                     Summary                           
+=======================================================
+Best speedup:    17.91x at 2 cores
+Best efficiency: 890.0% at 2 cores
+At 16 cores: 0.86x speedup, 0.0% efficiency
+Overall scalability: Fair
 ```
 
 **Resultado:** Los scripts de ondas demuestran que la combinación FEM-FDM con paralelización MPI permite simular problemas complejos de propagación de ondas con **alta eficiencia computacional** y **excelente escalabilidad** hasta ~8-16 cores para problemas de tamaño medio.
