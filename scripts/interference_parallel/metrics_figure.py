@@ -14,8 +14,8 @@ os.makedirs(output_dir, exist_ok=True)
 # Buscar archivos de métricas automáticamente
 def find_metrics_file():
     # Buscar en el directorio metrics_results que está junto a este script
-    metrics_dir = os.path.join(script_dir, "metrics_results")
-    pattern = os.path.join(metrics_dir, "wave_performance_*")
+    metrics_dir = os.path.join(script_dir, "interference_results")
+    pattern = os.path.join(metrics_dir, "interference_performance_*")
     local_metrics_files = glob.glob(pattern)
     
     if not local_metrics_files:
