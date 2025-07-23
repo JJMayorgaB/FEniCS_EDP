@@ -4,7 +4,7 @@ Este repositorio contiene una colección completa de simulaciones numéricas de 
 
 ## 🎥 Video de Exposición del Proyecto
 
-**🎬 Video en YouTube:** https://youtube.com/watch?v=VIDEO_ID_PLACEHOLDER
+**🎬 Video en YouTube:** https://www.youtube.com/watch?v=hjKCT3IukMg
 
 **Contenido del video (8 minutos máximo):**
 - 🎯 **Objetivo del proyecto**: Implementación de simulaciones numéricas de EDP con paralelización MPI
