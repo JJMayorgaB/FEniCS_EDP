@@ -2,6 +2,16 @@
 
 Este repositorio contiene una colección completa de simulaciones numéricas de Ecuaciones Diferenciales Parciales (EDP) implementadas con FEniCS/DOLFINx. El proyecto incluye simulaciones de ondas, difusión, ecuaciones del calor, interferencia, difracción y más, con capacidades de visualización avanzada y ejecución en paralelo.
 
+## 🎥 Video de Exposición del Proyecto
+
+[![Video de Exposición - FEniCS EDP Simulaciones](https://img.shields.io/badge/▶️%20Video-YouTube-red?style=for-the-badge&logo=youtube)](https://youtube.com/watch?v=VIDEO_ID_PLACEHOLDER)
+
+**Contenido del video (8 minutos máximo):**
+- 🎯 **Objetivo del proyecto**: Implementación de simulaciones numéricas de EDP con paralelización MPI
+- 🛠️ **Herramientas utilizadas**: FEniCS/DOLFINx, Python, MPI, Docker, ParaView
+- ⚡ **Problemas resueltos**: Ecuaciones de onda, calor, difusión, interferencia, difracción
+- 📊 **Resultados y métricas**: Análisis de rendimiento paralelo, speedup y escalabilidad
+
 ## 📁 Estructura del Proyecto
 
 ```
