@@ -4,7 +4,7 @@ Este repositorio contiene una colección completa de simulaciones numéricas de 
 
 ## 🎥 Video de Exposición del Proyecto
 
-[![Video de Exposición - FEniCS EDP Simulaciones](https://img.shields.io/badge/▶️%20Video-YouTube-red?style=for-the-badge&logo=youtube)](https://youtube.com/watch?v=VIDEO_ID_PLACEHOLDER)
+**🎬 Video en YouTube:** https://youtube.com/watch?v=VIDEO_ID_PLACEHOLDER
 
 **Contenido del video (8 minutos máximo):**
 - 🎯 **Objetivo del proyecto**: Implementación de simulaciones numéricas de EDP con paralelización MPI
