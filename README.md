@@ -74,19 +74,11 @@ cd FEniCS_EDP
 docker build -t fenics-edp .
 
 # 3. Ejecutar el contenedor con montaje del directorio actual
-docker run -it --rm \
-    -v $(pwd):/workspace \
-    -e DISPLAY=:99 \
-    --name fenics-container \
-    fenics-edp
+docker run -it --rm -v "${PWD}:/workspace" fenics-dev /bin/bash
 
-# 4. Una vez dentro del contenedor, configurar el display virtual
-Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset &
-export DISPLAY=:99
-
-# 5. Ejecutar cualquier script
+# 4. Ejecutar cualquier script
 python3 scripts/wave_eq.py
-./run_parallel.sh
+mpirun -n 4 python3 scripts/interpolation_parallel.py
 ```
 
 ### 📦 Opción 2: Apptainer/Singularity (RECOMENDADO PARA HPC)
@@ -105,10 +97,7 @@ git clone https://github.com/JJMayorgaB/FEniCS_EDP
 cd FEniCS_EDP
 
 # 2. Construir el contenedor SIF (solo necesario la primera vez)
-sudo apptainer build fenics.sif fenics.def
-
-# Alternativamente, si no tiene privilegios sudo:
-apptainer build --remote fenics.sif fenics.def
+apptainer build fenics.sif fenics.def
 
 # 3. Ejecutar el contenedor
 apptainer shell fenics.sif
@@ -116,7 +105,7 @@ apptainer shell fenics.sif
 # 4. Una vez dentro del contenedor, el display ya está configurado
 # Ejecutar directamente los scripts
 python3 scripts/wave_eq.py
-./run_parallel.sh
+mpirun -n 4 python3 scripts/interpolation_parallel.py
 ```
 
 ## 🔧 Configuración del Entorno
@@ -492,6 +481,46 @@ Overall scalability: Fair
 ```
 
 **Resultado:** Los scripts de ondas demuestran que la combinación FEM-FDM con paralelización MPI permite simular problemas complejos de propagación de ondas con **alta eficiencia computacional** y **excelente escalabilidad** hasta ~8-16 cores para problemas de tamaño medio.
+
+## 🎨 Visualización con ParaView
+
+Los archivos de resultados generados en formato XDMF/HDF5 pueden visualizarse fácilmente con ParaView para análisis post-procesamiento avanzado.
+
+### 📋 Instrucciones de Visualización
+
+1. **Abrir ParaView** (incluido en el contenedor Docker)
+   ```bash
+   # Desde dentro del contenedor
+   paraview
+   ```
+
+2. **Cargar archivos XDMF**
+   - File → Open → Seleccionar archivo `.xdmf` desde `post_data/`
+   - Los archivos `.h5` se cargan automáticamente (no abrir directamente)
+
+3. **Ejemplos de archivos disponibles:**
+   ```
+   post_data/
+   ├── wave/wave_solution.xdmf                    # Ondas 1D
+   ├── wave/wave_2d_solution.xdmf                 # Ondas 2D gaussianas
+   ├── wave/wave_interference_2d.xdmf             # Interferencia
+   ├── wave/wave_diffraction_2d.xdmf              # Difracción
+   ├── heat/heat_solution.xdmf                    # Ecuación del calor
+   ├── diffusion/diffusion.xdmf                   # Difusión
+   ├── poisson/poisson.xdmf                       # Poisson
+   └── biharmonic/biharmonic.xdmf                 # Biharmonica
+   ```
+
+4. **Visualización de series temporales:**
+   - Usar controles de **Play/Pause** para animaciones
+   - Ajustar **ColorMap** y **Contours** según necesidad
+   - Aplicar filtros como **Warp By Scalar** para visualización 3D
+
+### 💡 Consejos de Visualización
+
+- **Para ondas**: Usar `Warp By Scalar` para ver la propagación en 3D
+- **Para campos escalares**: Aplicar `Contour` para isolíneas
+- **Para animaciones**: Exportar como `.avi` o `.gif` desde File → Save Animation
 
 ## 📄 Licencia
 
