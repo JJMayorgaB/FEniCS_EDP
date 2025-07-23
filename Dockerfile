@@ -35,11 +35,6 @@ RUN apt-get update && \
 RUN apt-get update && apt-get install -y \
     xvfb \
     x11-utils \
-    libxcb-xinerama0 \
-    libxkbcommon-x11-0 \
-    libxcb-render0 \
-    libxcb-shm0 \
-    libgl1-mesa-dri \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
